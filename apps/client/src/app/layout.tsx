@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { ToastContainer } from "react-toastify";
 import { ClerkProvider } from "@clerk/nextjs";
+import DebugToken from "@/components/DebugToken";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +34,7 @@ export default function RootLayout({
           className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-gray-900`}
           suppressHydrationWarning
         >
+          <DebugToken />
           {/* 🔥 Navbar should be full width */}
           <Navbar />
 

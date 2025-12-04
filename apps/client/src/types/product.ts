@@ -10,7 +10,8 @@ export interface ProductType {
   flavors: string[]; // e.g. ["Orange", "Chocolate", "Unflavored"]
   benefits: string[]; // e.g. ["Immunity", "Gut Health"]
   images: {
-    [key: string]: string; // Maps flavor/variant to image path
+    main: string;
+    [key: string]: string|string[]; // Maps flavor/variant to image path
   };
   categorySlug: string;
   isBestSeller?: boolean;

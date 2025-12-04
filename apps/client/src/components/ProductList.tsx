@@ -18,13 +18,14 @@ export const products: ProductType[] = [
       "High-protein formula enriched with dietary fiber, vitamins, and essential amino acids for faster recovery.",
     description:
       "Set a new standard in protein supplementation. Our Chocolate flavor protein is fortified with essential amino acids and flavonoids. Ideal for muscle development, heart health, digestion, and overall energy. Contains Skimmed Milk Protein and Soya Protein isolate.",
-    price: 349.00, // Selling price
-    originalPrice: 399.00, // MRP from Label
+    price: 349.0,
+    originalPrice: 399.0,
     packSize: ["200gm"],
     flavors: ["chocolate"],
     benefits: ["Muscle Growth", "Heart Health", "Digestion", "Immunity"],
     images: {
-      chocolate: "/products/c-1.jpg",
+      main: "/products/c-1.jpg", // Default/Fallback image
+      chocolate: ["/products/c-1.jpg"], // Specific flavor as an array
     },
     categorySlug: "supplements",
     isBestSeller: true,
@@ -39,13 +40,14 @@ export const products: ProductType[] = [
       "Ayurvedic formulation with Fulvic Acid and Ginkgo Biloba to restore vigor and vitality.",
     description:
       "Experience all-day energy with our premium Shilajit capsules. Formulated to boost stamina, support muscle growth, and manage daily stress levels. Contains 500mg Shilajit (Asphaltum punjabianum) and 50mg Ginkgo Biloba per capsule.",
-    price: 499.00,
-    originalPrice: 599.00, // MRP from Label
+    price: 499.0,
+    originalPrice: 599.0,
     packSize: ["30 Capsules"],
     flavors: ["natural"],
     benefits: ["Stamina", "Vigor", "Stress Management", "Muscle Energy"],
     images: {
-      natural: "/products/sec-1.jpg",
+      main: "/products/sec-1.jpg",
+      natural: ["/products/sec-1.jpg"],
     },
     categorySlug: "ayurveda",
     isBestSeller: true,
@@ -60,13 +62,14 @@ export const products: ProductType[] = [
       "Apple Cider Vinegar with Mother, Moringa, Cinnamon, and Guggul extract for weight management.",
     description:
       "Delicious Orange flavored effervescent tablets designed for gut health and weight loss. Just drop, dissolve, and drink to boost immunity and reduce stress. Contains Apple Cider Vinegar, Moringa, Cinnamon, and Guggul extract.",
-    price: 349.00,
-    originalPrice: 399.00, // MRP from Label
+    price: 349.0,
+    originalPrice: 399.0,
     packSize: ["15 Tablets", "30 Tablets"],
     flavors: ["orange"],
     benefits: ["Weight Loss", "Gut Health", "Immunity", "Reduced Stress"],
     images: {
-      orange: "/products/acv-1.jpg",
+      main: "/products/acv-1.jpg",
+      orange: ["/products/acv-1.jpg"],
     },
     categorySlug: "weight-management",
     createdAt: new Date(),
@@ -80,13 +83,14 @@ export const products: ProductType[] = [
       "Comprehensive blend of Vitamins, Minerals, and Amino Acids tailored for men's health.",
     description:
       "Fuel your day with our Multivitamin for Men. Supports strong muscles, heart health, and immunity. Enriched with Lycopene, Ginseng, and essential minerals like Zinc and Magnesium for peak performance.",
-    price: 449.00,
-    originalPrice: 499.00, // MRP from Label
+    price: 449.0,
+    originalPrice: 499.0,
     packSize: ["60 Tablets"],
     flavors: ["unflavored"],
     benefits: ["Strong Muscle", "Heart Health", "Immunity", "Daily Energy"],
     images: {
-      unflavored: "/products/mvm-1.png",
+      main: "/products/mvm-1.png",
+      unflavored: ["/products/mvm-1.png"],
     },
     categorySlug: "vitamins",
     createdAt: new Date(),
@@ -100,13 +104,14 @@ export const products: ProductType[] = [
       "Specially formulated with Veg Collagen, Iron, and Folic Acid for women's overall wellness.",
     description:
       "Stay active and radiant. Our Women's Multivitamin supports strong bones, hormonal balance, and skin radiance. Includes Veg Collagen Peptide, Hyaluronic Acid, and a full spectrum of vitamins for daily stress management.",
-    price: 449.00,
-    originalPrice: 499.00, // MRP from Label
+    price: 449.0,
+    originalPrice: 499.0,
     packSize: ["60 Tablets"],
     flavors: ["unflavored"],
     benefits: ["Radiance", "Strong Bones", "Hormonal Balance", "Immunity"],
     images: {
-      unflavored: "/products/mvw-1.jpg",
+      main: "/products/mvw-1.jpg",
+      unflavored: ["/products/mvw-1.jpg"],
     },
     categorySlug: "vitamins",
     createdAt: new Date(),

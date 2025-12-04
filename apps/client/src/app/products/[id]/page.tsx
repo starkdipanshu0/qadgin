@@ -51,7 +51,14 @@ const ProductPage = async ({
   const selectedSize = size || product.packSize?.[0] || "";
 
   // 2. Determine Image based on selected flavor
-  const currentImage = (product.images as Record<string, string>)?.[selectedFlavor] || Object.values(product.images)[0];
+  // Determine Image URL (Single String) based on selected flavor
+const currentImage = (
+  Array.isArray(product.images[selectedFlavor]) 
+    ? product.images[selectedFlavor][0] 
+    : (product.images.main as string)
+) || "";
+console.log("current image:",currentImage, "image tyupe::",typeof currentImage);
+  
 
   // 3. Calculate Discount
   const hasDiscount = product.originalPrice && product.originalPrice > product.price;
@@ -91,7 +98,7 @@ const ProductPage = async ({
             </div>
             
             <Image
-              src={currentImage?currentImage: ""}
+              src={currentImage}
               alt={product.name}
               fill
               className="object-contain p-8 animate-fade-in"
@@ -122,11 +129,11 @@ const ProductPage = async ({
               {/* Price Block */}
               <div className="flex items-end gap-3 mb-6">
                 <span className="text-3xl font-bold text-emerald-800">
-                  ${product.price.toFixed(2)}
+                  ₹{product.price.toFixed(2)}
                 </span>
                 {hasDiscount && (
                   <span className="text-lg text-stone-400 line-through mb-1">
-                    ${product.originalPrice!.toFixed(2)}
+                    ₹{product.originalPrice!.toFixed(2)}
                   </span>
                 )}
               </div>
@@ -152,7 +159,7 @@ const ProductPage = async ({
             <div className="grid grid-cols-2 gap-4 py-4">
               <div className="flex items-center gap-3 text-stone-700 text-sm font-medium p-3 bg-stone-50 rounded-lg border border-stone-100">
                 <Truck className="w-5 h-5 text-emerald-600" />
-                <span>Free Shipping over $50</span>
+                <span>Free Shipping over ₹500</span>
               </div>
               <div className="flex items-center gap-3 text-stone-700 text-sm font-medium p-3 bg-stone-50 rounded-lg border border-stone-100">
                 <ShieldCheck className="w-5 h-5 text-emerald-600" />

@@ -6,21 +6,28 @@ import { StripeProductType } from "@repo/types";
 export const createProduct = async (req: Request, res: Response) => {
   const data: Prisma.ProductCreateInput = req.body;
 
-  const { colors, images } = data;
-  if (!colors || !Array.isArray(colors) || colors.length === 0) {
-    return res.status(400).json({ message: "Colors array is required!" });
+  const { flavors, images } = data;
+
+  if (!flavors || !Array.isArray(flavors) || flavors.length === 0) {
+    return res.status(400).json({ message: "Flavors array is required!" });
   }
 
-  if (!images || typeof images !== "object") {
+  if (!images || typeof images !== "object" || Array.isArray(images)) {
     return res.status(400).json({ message: "Images object is required!" });
   }
 
-  const missingColors = colors.filter((color) => !(color in images));
+  const imagesObj = images as Record<string, any>;
 
-  if (missingColors.length > 0) {
+  if (!imagesObj.main) {
+    return res.status(400).json({ message: "Main image is required!" });
+  }
+
+  const missingFlavors = flavors.filter((flavor) => !(flavor in imagesObj));
+
+  if (missingFlavors.length > 0) {
     return res
       .status(400)
-      .json({ message: "Missing images for colors!", missingColors });
+      .json({ message: "Missing images for flavors!", missingFlavors });
   }
 
   const product = await prisma.product.create({ data });

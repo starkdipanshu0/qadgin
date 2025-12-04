@@ -2,20 +2,20 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { CustomJwtSessionClaims } from "@repo/types";
 
 const isPublicRoute = createRouteMatcher(["/sign-in(.*)","/unauthorized(.*)"]);
-
+console.log("wergthyjhukl 23456789");
 export default clerkMiddleware(async (auth, req) => {
   if (!isPublicRoute(req)) {
     await auth.protect();
 
     const { userId, sessionClaims } = await auth();
 
-    if (userId && sessionClaims) {
-      const userRole = (sessionClaims as CustomJwtSessionClaims).metadata?.role;
-
-      if (userRole !== "admin") {
-        return Response.redirect(new URL("/unauthorized", req.url));
-      }
-    }
+    // if (userId && sessionClaims) {
+    //   const userRole = (sessionClaims as CustomJwtSessionClaims).metadata?.role;
+    //   console.log("userRole ",userRole);
+    //   if (userRole !== "admin") {
+    //     return Response.redirect(new URL("/unauthorized", req.url));
+    //   }
+    // }
   }
 });
 

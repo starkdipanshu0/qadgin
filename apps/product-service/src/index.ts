@@ -4,7 +4,7 @@ import { clerkMiddleware, getAuth } from "@clerk/express";
 import { shouldBeUser } from "./middleware/authMiddleware.js";
 import productRouter from "./routes/product.route";
 import categoryRouter from "./routes/category.route";
-import { consumer, producer } from "./utils/kafka.js";
+// import { consumer, producer } from "./utils/kafka.js";
 const app = express();
 app.use(
   cors({
@@ -13,7 +13,7 @@ app.use(
   })
 );
 app.use(express.json());
-app.use(clerkMiddleware());
+// app.use(clerkMiddleware());
 
 app.get("/health", (req: Request, res: Response) => {
   return res.status(200).json({
@@ -39,7 +39,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 
 const start = async () => {
   try {
-    Promise.all([await producer.connect(), await consumer.connect()]);
+    // Promise.all([await producer.connect(), await consumer.connect()]);
     app.listen(8000, () => {
       console.log("Product service is running on 8000");
     });
