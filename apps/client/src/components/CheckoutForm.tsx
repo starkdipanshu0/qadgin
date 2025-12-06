@@ -22,7 +22,7 @@ const CheckoutForm = ({
       address: {
         line1: shippingForm.address,
         city: shippingForm.city,
-        country: "US",
+        country: "IN",
       },
     });
 

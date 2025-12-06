@@ -40,7 +40,7 @@ const OrdersPage = async () => {
             </div>
             <div className="w-1/12">
               <span className="font-medium text-sm text-gray-500">Total</span>
-              <p>{order.amount / 100}</p>
+              <p>₹{(order.amount / 100).toFixed(2)}</p>
             </div>
             <div className="w-1/12">
               <span className="font-medium text-sm text-gray-500">Status</span>
@@ -58,9 +58,9 @@ const OrdersPage = async () => {
               <span className="font-medium text-sm text-gray-500">
                 Products
               </span>
-              <p>{order.products?.map(product=> product.name).join(", ") || "-"}</p>
+              <p>{order.products?.map(product => product.name).join(", ") || "-"}</p>
             </div>
-            
+
           </li>
         ))}
       </ul>

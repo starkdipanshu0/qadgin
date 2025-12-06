@@ -1,4 +1,4 @@
-import { ProductsType } from "@repo/types";
+import { ProductsType, CategoryType } from "@repo/types";
 import Categories from "./Categories";
 import ProductCard from "./ProductCard";
 import Link from "next/link";
@@ -19,8 +19,19 @@ const fetchData = async ({
     `${process.env.NEXT_PUBLIC_PRODUCT_SERVICE_URL}/products?${category ? `category=${category}` : ""}${search ? `&search=${search}` : ""}&sort=${sort || "newest"}${params === "homepage" ? "&limit=8" : ""}`
   );
   const data: ProductsType = await res.json();
-  console.log(data);
   return data;
+};
+
+const fetchCategories = async () => {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_PRODUCT_SERVICE_URL}/categories`);
+    if (!res.ok) return [];
+    const data: CategoryType[] = await res.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch categories:", error);
+    return [];
+  }
 };
 const ProductList = async ({
   category,
@@ -33,12 +44,14 @@ const ProductList = async ({
   search?: string;
   params: "homepage" | "products";
 }) => {
-  const products = await fetchData({ category, sort, search, params });
-  console.log("productsss:  ",products);
+  const [products, categories] = await Promise.all([
+    fetchData({ category, sort, search, params }),
+    fetchCategories(),
+  ]);
 
   return (
     <div className="w-full">
-      <Categories />
+      <Categories categories={categories} />
       {params === "products" && <Filter />}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-12">
         {products.map((product) => (
