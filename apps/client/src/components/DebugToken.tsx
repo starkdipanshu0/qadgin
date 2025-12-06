@@ -15,7 +15,7 @@ export default function DebugToken() {
 
                 if (token) {
                     const parts = token.split('.');
-                    if (parts.length === 3) {
+                    if (parts.length === 3 && parts[1]) {
                         const payload = JSON.parse(atob(parts[1]));
                         console.log("🔓 Decoded Token Payload:", payload);
                     }

@@ -1,5 +1,5 @@
 import ProductInteraction from "@/components/ProductInteraction";
-import { products } from "@/components/ProductList"; // Assuming this is your mock data source
+
 // Make sure your ProductType definition in @repo/types includes the new health fields (tagline, packSize, flavors, etc.)
 import { ProductType } from "@repo/types";
 import { Check, ChevronRight, ShieldCheck, Truck } from "lucide-react";
@@ -7,10 +7,17 @@ import Image from "next/image";
 import Link from "next/link";
 
 // Mock fetcher - replace with actual API call
+// Mock fetcher - replace with actual API call
 const fetchProduct = async (id: string) => {
-  // Simulate API delay
-  // await new Promise(resolve => setTimeout(resolve, 500));
-  return products.find((product) => product.id === Number(id));
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_PRODUCT_SERVICE_URL}/products/${id}`);
+    if (!res.ok) return undefined;
+    const product: ProductType = await res.json();
+    return product;
+  } catch (error) {
+    console.error("Failed to fetch product:", error);
+    return undefined;
+  }
 }
 
 export const generateMetadata = async ({
@@ -52,13 +59,13 @@ const ProductPage = async ({
 
   // 2. Determine Image based on selected flavor
   // Determine Image URL (Single String) based on selected flavor
-const currentImage = (
-  Array.isArray(product.images[selectedFlavor]) 
-    ? product.images[selectedFlavor][0] 
-    : (product.images.main as string)
-) || "";
-console.log("current image:",currentImage, "image tyupe::",typeof currentImage);
-  
+  const currentImage = (
+    Array.isArray(product.images[selectedFlavor])
+      ? product.images[selectedFlavor][0]
+      : (product.images.main as string)
+  ) || "";
+  console.log("current image:", currentImage, "image tyupe::", typeof currentImage);
+
 
   // 3. Calculate Discount
   const hasDiscount = product.originalPrice && product.originalPrice > product.price;
@@ -69,7 +76,7 @@ console.log("current image:",currentImage, "image tyupe::",typeof currentImage);
   return (
     <div className="bg-white min-h-screen pb-20 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* --- BREADCRUMBS --- */}
         <nav className="flex items-center gap-2 text-sm text-stone-500 py-6">
           <Link href="/" className="hover:text-emerald-700 transition-colors">Home</Link>
@@ -80,23 +87,23 @@ console.log("current image:",currentImage, "image tyupe::",typeof currentImage);
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
-          
+
           {/* --- LEFT COLUMN: IMAGE --- */}
           <div className="relative aspect-[4/5] bg-stone-50 rounded-2xl overflow-hidden border border-stone-100 sticky top-24">
             {/* Badges */}
             <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-                {product.isBestSeller && (
+              {product.isBestSeller && (
                 <span className="bg-amber-400 text-amber-950 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shadow-sm">
-                    Bestseller
+                  Bestseller
                 </span>
-                )}
-                {hasDiscount && (
+              )}
+              {hasDiscount && (
                 <span className="bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm">
-                    -{discountPercentage}% OFF
+                  -{discountPercentage}% OFF
                 </span>
-                )}
+              )}
             </div>
-            
+
             <Image
               src={currentImage}
               alt={product.name}
@@ -108,7 +115,7 @@ console.log("current image:",currentImage, "image tyupe::",typeof currentImage);
 
           {/* --- RIGHT COLUMN: DETAILS & BUY BOX --- */}
           <div className="flex flex-col gap-8 pt-2">
-            
+
             {/* HEADER INFO */}
             <div>
               {product.tagline && (
@@ -165,55 +172,55 @@ console.log("current image:",currentImage, "image tyupe::",typeof currentImage);
                 <ShieldCheck className="w-5 h-5 text-emerald-600" />
                 <span>Secure Checkout</span>
               </div>
-               {/* Add more like "Non-GMO", "GMP Certified" based on your product data */}
+              {/* Add more like "Non-GMO", "GMP Certified" based on your product data */}
             </div>
 
             {/* ACCORDIONS FOR DETAILED INFO */}
             <div className="flex flex-col border-t border-stone-200 divide-y divide-stone-200">
-               {/* Description Accordion */}
-               <details className="group py-4 cursor-pointer" open>
-                  <summary className="flex items-center justify-between font-bold text-stone-800 list-none">
-                    Product Details
-                    <span className="transition group-open:rotate-180">
-                      <ChevronRight className="w-5 h-5" />
-                    </span>
-                  </summary>
-                  <p className="text-stone-600 mt-4 leading-relaxed whitespace-pre-line">
-                    {product.description}
-                  </p>
-               </details>
+              {/* Description Accordion */}
+              <details className="group py-4 cursor-pointer" open>
+                <summary className="flex items-center justify-between font-bold text-stone-800 list-none">
+                  Product Details
+                  <span className="transition group-open:rotate-180">
+                    <ChevronRight className="w-5 h-5" />
+                  </span>
+                </summary>
+                <p className="text-stone-600 mt-4 leading-relaxed whitespace-pre-line">
+                  {product.description}
+                </p>
+              </details>
 
-               {/* Ingredients Mockup - You would map real data here */}
-               <details className="group py-4 cursor-pointer">
-                  <summary className="flex items-center justify-between font-bold text-stone-800 list-none">
-                    Key Ingredients & Benefits
-                    <span className="transition group-open:rotate-180">
-                       <ChevronRight className="w-5 h-5" />
-                    </span>
-                  </summary>
-                  <ul className="mt-4 space-y-2 text-stone-600">
-                    {product.benefits?.map(benefit => (
-                       <li key={benefit} className="flex items-start gap-2">
-                          <Check className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5"/>
-                          <span>{benefit}</span>
-                       </li>
-                    ))}
-                  </ul>
-               </details>
-                
-               {/* Shipping Info Accordion */}
-               <details className="group py-4 cursor-pointer">
-                  <summary className="flex items-center justify-between font-bold text-stone-800 list-none">
-                    Shipping & Returns
-                    <span className="transition group-open:rotate-180">
-                       <ChevronRight className="w-5 h-5" />
-                    </span>
-                  </summary>
-                  <div className="text-stone-600 mt-4 text-sm space-y-2">
-                    <p>We ship worldwide. Standard shipping typically takes 3-5 business days.</p>
-                    <p>If you're not satisfied, return within 30 days for a full refund.</p>
-                  </div>
-               </details>
+              {/* Ingredients Mockup - You would map real data here */}
+              <details className="group py-4 cursor-pointer">
+                <summary className="flex items-center justify-between font-bold text-stone-800 list-none">
+                  Key Ingredients & Benefits
+                  <span className="transition group-open:rotate-180">
+                    <ChevronRight className="w-5 h-5" />
+                  </span>
+                </summary>
+                <ul className="mt-4 space-y-2 text-stone-600">
+                  {product.benefits?.map(benefit => (
+                    <li key={benefit} className="flex items-start gap-2">
+                      <Check className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                      <span>{benefit}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+
+              {/* Shipping Info Accordion */}
+              <details className="group py-4 cursor-pointer">
+                <summary className="flex items-center justify-between font-bold text-stone-800 list-none">
+                  Shipping & Returns
+                  <span className="transition group-open:rotate-180">
+                    <ChevronRight className="w-5 h-5" />
+                  </span>
+                </summary>
+                <div className="text-stone-600 mt-4 text-sm space-y-2">
+                  <p>We ship worldwide. Standard shipping typically takes 3-5 business days.</p>
+                  <p>If you're not satisfied, return within 30 days for a full refund.</p>
+                </div>
+              </details>
             </div>
 
           </div>

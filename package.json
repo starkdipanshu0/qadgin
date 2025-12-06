@@ -9,6 +9,7 @@
     "check-types": "turbo run check-types"
   },
   "devDependencies": {
+    "@radix-ui/react-dismissable-layer": "^1.1.11",
     "@radix-ui/react-visually-hidden": "^1.2.4",
     "prettier": "^3.6.2",
     "turbo": "^2.5.6",

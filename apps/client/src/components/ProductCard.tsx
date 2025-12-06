@@ -1,11 +1,11 @@
 "use client";
 
 import useCartStore from "@/stores/cartStore";
-import { ProductType } from "@/types/product";
+import { ProductType } from "@repo/types";
 import { ShoppingBag, Zap } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react"; // Removed useEffect (not needed)
+import { useState } from "react";
 import { toast } from "react-toastify";
 
 const ProductCard = ({ product }: { product: ProductType }) => {
@@ -17,8 +17,6 @@ const ProductCard = ({ product }: { product: ProductType }) => {
   const { addToCart } = useCartStore();
 
   // 2. CALCULATE IMAGE (Derived State)
-  // We extract the logic here. No useEffect needed.
-  // If flavor changes, this automatically recalculates on re-render.
   const getDisplayImage = (): string => {
     const flavorImage = product.images[selectedFlavor];
 
@@ -32,14 +30,16 @@ const ProductCard = ({ product }: { product: ProductType }) => {
   };
 
   const displayImage = getDisplayImage();
-  
+  console.log("ProductCard Image:", { id: product.id, name: product.name, displayImage });
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     addToCart({
       ...product,
       quantity: 1,
-      selectedSize: product.packSize[0],
+      selectedSize: product.packSize?.[0] || "",
+      originalPrice: product.originalPrice || 0,
+      isBestSeller: product.isBestSeller ?? false,
       selectedColor: selectedFlavor,
     });
     toast.success("Added to cart");
@@ -50,7 +50,9 @@ const ProductCard = ({ product }: { product: ProductType }) => {
     addToCart({
       ...product,
       quantity: 1,
-      selectedSize: product.packSize[0],
+      selectedSize: product.packSize?.[0] || "",
+      originalPrice: product.originalPrice || 0,
+      isBestSeller: product.isBestSeller ?? false,
       selectedColor: selectedFlavor,
     });
     toast.success("Redirecting to checkout...");
@@ -77,7 +79,7 @@ const ProductCard = ({ product }: { product: ProductType }) => {
               {Math.round(
                 ((product.originalPrice - product.price) /
                   product.originalPrice) *
-                  100
+                100
               )}
               %
             </span>
@@ -85,21 +87,19 @@ const ProductCard = ({ product }: { product: ProductType }) => {
         </div>
 
         {/* RENDER IMAGE USING DERIVED CONSTANT */}
-        {displayImage  ? (
-          
+        {displayImage ? (
           <Image
             src={displayImage}
             alt={product.name}
             width={500}
             height={500}
-            className="object-cover rounded-lg w-full h-full" // Added w-full h-full to ensure it fills aspect ratio
+            className="object-cover rounded-lg w-full h-full"
           />
         ) : (
           <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500">
             No Image
           </div>
         )}
-        
       </Link>
 
       {/* 2. MINIMAL INFO SECTION */}
@@ -121,7 +121,7 @@ const ProductCard = ({ product }: { product: ProductType }) => {
           {/* Price Column */}
           <div className="flex flex-col leading-none mb-1">
             <span className="text-xs text-stone-400 font-medium mb-0.5">
-              {product.packSize[0]}
+              {product.packSize?.[0] || ""}
             </span>
             <div className="flex items-center gap-1.5">
               <span className="text-lg font-bold text-stone-900">
