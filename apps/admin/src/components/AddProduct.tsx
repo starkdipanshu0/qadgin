@@ -30,10 +30,58 @@ import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { Checkbox } from "./ui/checkbox";
 import { ScrollArea } from "./ui/scroll-area";
-import { CategoryType, colors, ProductFormSchema, sizes } from "@repo/types";
+import { CategoryType } from "@repo/types";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { useAuth } from "@clerk/nextjs";
+
+
+
+const ProductFormSchema = z
+  .object({
+    name: z
+      .string({ message: "Product name is required!" })
+      .min(1, { message: "Product name is required!" }),
+    shortDescription: z
+      .string({ message: "Short description is required!" })
+      .min(1, { message: "Short description is required!" })
+      .max(60),
+    description: z
+      .string({ message: "Description is required!" })
+      .min(1, { message: "Description is required!" }),
+    price: z
+      .number({ message: "Price is required!" })
+      .min(1, { message: "Price is required!" }),
+    tagline: z
+      .string({ message: "Tagline is required!" })
+      .min(1, { message: "Tagline is required!" }),
+    originalPrice: z
+      .number({ message: "Original price is required!" })
+      .min(1, { message: "Original price is required!" }),
+    categorySlug: z
+      .string({ message: "Category is required!" })
+      .min(1, { message: "Category is required!" }),
+    images: z.record(z.string(), z.string(), {
+      message: "Image for each flavor is required!",
+    }),
+    flavors: z.array(z.string()).min(1, { message: "Flavor is required!" }),
+    packSize: z.array(z.string()).min(1, { message: "Pack Size is required!" }),
+    benefits: z
+      .string({ message: "Benefits are required!" })
+      .min(1, { message: "Benefits are required!" }),
+  })
+  .refine(
+    (data) => {
+      const missingImages = data.flavors.filter(
+        (flavor: string) => !data.images?.[flavor]
+      );
+      return missingImages.length === 0;
+    },
+    {
+      message: "Image is required for each selected flavor!",
+      path: ["images"],
+    }
+  );
 
 // const categories = [
 //   "T-shirts",
@@ -65,10 +113,13 @@ const AddProduct = () => {
       shortDescription: "",
       description: "",
       price: 0,
+      originalPrice: 0,
+      tagline: "",
       categorySlug: "",
-      sizes: [],
-      colors: [],
+      packSize: [],
+      flavors: [],
       images: {},
+      benefits: "",
     },
   });
 
@@ -82,11 +133,15 @@ const AddProduct = () => {
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof ProductFormSchema>) => {
       const token = await getToken();
+      const payload = {
+        ...data,
+        benefits: data.benefits.split(",").map((b) => b.trim()),
+      };
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_PRODUCT_SERVICE_URL}/products`,
         {
           method: "POST",
-          body: JSON.stringify(data),
+          body: JSON.stringify(payload),
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -127,6 +182,22 @@ const AddProduct = () => {
                       </FormControl>
                       <FormDescription>
                         Enter the name of the product.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="tagline"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tagline</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Enter the tagline of the product.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -186,6 +257,28 @@ const AddProduct = () => {
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="originalPrice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Original Price</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value))
+                          }
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Enter the original price of the product.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 {data && (
                   <FormField
                     control={form.control}
@@ -217,37 +310,24 @@ const AddProduct = () => {
                 )}
                 <FormField
                   control={form.control}
-                  name="sizes"
+                  name="packSize"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Sizes</FormLabel>
+                      <FormLabel>Pack Size</FormLabel>
                       <FormControl>
-                        <div className="grid grid-cols-3 gap-4 my-2">
-                          {sizes.map((size) => (
-                            <div className="flex items-center gap-2" key={size}>
-                              <Checkbox
-                                id="size"
-                                checked={field.value?.includes(size)}
-                                onCheckedChange={(checked) => {
-                                  const currentValues = field.value || [];
-                                  if (checked) {
-                                    field.onChange([...currentValues, size]);
-                                  } else {
-                                    field.onChange(
-                                      currentValues.filter((v) => v !== size)
-                                    );
-                                  }
-                                }}
-                              />
-                              <label htmlFor="size" className="text-xs">
-                                {size}
-                              </label>
-                            </div>
-                          ))}
-                        </div>
+                        <Input
+                          placeholder="e.g. 1kg, 250g (comma separated)"
+                          onChange={(e) => {
+                            const values = e.target.value
+                              .split(",")
+                              .map((v) => v.trim())
+                              .filter((v) => v);
+                            field.onChange(values);
+                          }}
+                        />
                       </FormControl>
                       <FormDescription>
-                        Select the available sizes for the product.
+                        Enter available pack sizes (comma separated).
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -255,49 +335,24 @@ const AddProduct = () => {
                 />
                 <FormField
                   control={form.control}
-                  name="colors"
+                  name="flavors"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Colors</FormLabel>
+                      <FormLabel>Flavors</FormLabel>
                       <FormControl>
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-3 gap-4 my-2">
-                            {colors.map((color) => (
-                              <div
-                                className="flex items-center gap-2"
-                                key={color}
-                              >
-                                <Checkbox
-                                  id="color"
-                                  checked={field.value?.includes(color)}
-                                  onCheckedChange={(checked) => {
-                                    const currentValues = field.value || [];
-                                    if (checked) {
-                                      field.onChange([...currentValues, color]);
-                                    } else {
-                                      field.onChange(
-                                        currentValues.filter((v) => v !== color)
-                                      );
-                                    }
-                                  }}
-                                />
-                                <label
-                                  htmlFor="color"
-                                  className="text-xs flex items-center gap-2"
-                                >
-                                  <div
-                                    className="w-2 h-2 rounded-full"
-                                    style={{ backgroundColor: color }}
-                                  />
-                                  {color}
-                                </label>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                        <Input
+                          placeholder="e.g. Chocolate, Vanilla (comma separated)"
+                          onChange={(e) => {
+                            const values = e.target.value
+                              .split(",")
+                              .map((v) => v.trim())
+                              .filter((v) => v);
+                            field.onChange(values);
+                          }}
+                        />
                       </FormControl>
                       <FormDescription>
-                        Select the available colors for the product.
+                        Enter available flavors (comma separated).
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -311,18 +366,14 @@ const AddProduct = () => {
                       <FormLabel>Images</FormLabel>
                       <FormControl>
                         <div className="">
-                          {form.watch("colors")?.map((color) => (
+                          {form.watch("flavors")?.map((flavor) => (
                             <div
                               className="mb-4 flex items-center gap-4"
-                              key={color}
+                              key={flavor}
                             >
                               <div className="flex items-center gap-2">
-                                <div
-                                  className="w-4 h-4 rounded-full"
-                                  style={{ backgroundColor: color }}
-                                />
                                 <span className="text-sm font-medium min-w-[80px]">
-                                  {color}:
+                                  {flavor}:
                                 </span>
                               </div>
                               <Input
@@ -353,7 +404,7 @@ const AddProduct = () => {
                                           form.getValues("images") || {};
                                         form.setValue("images", {
                                           ...currentImages,
-                                          [color]: data.secure_url,
+                                          [flavor]: data.secure_url,
                                         });
                                       }
                                     } catch (error) {
@@ -363,7 +414,7 @@ const AddProduct = () => {
                                   }
                                 }}
                               />
-                              {field.value?.[color] ? (
+                              {field.value?.[flavor] ? (
                                 <span className="text-green-600 text-sm">
                                   Image selected
                                 </span>
@@ -376,6 +427,25 @@ const AddProduct = () => {
                           ))}
                         </div>
                       </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="benefits"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Benefits</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          placeholder="Benefit 1, Benefit 2, Benefit 3"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Enter the benefits of the product (comma separated).
+                      </FormDescription>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />

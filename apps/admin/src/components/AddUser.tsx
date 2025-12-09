@@ -41,6 +41,9 @@ const AddUser = () => {
       emailAddress: [],
       username: "",
       password: "",
+      phone: "",
+      address: "",
+      city: "",
     },
   });
 
@@ -48,12 +51,21 @@ const AddUser = () => {
 
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof UserFormSchema>) => {
+      const { phone, address, city, ...rest } = data;
+      const userPayload = {
+        ...rest,
+        publicMetadata: {
+          phone,
+          address,
+          city,
+        },
+      };
       const token = await getToken();
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_AUTH_SERVICE_URL}/users`,
         {
           method: "POST",
-          body: JSON.stringify(data),
+          body: JSON.stringify(userPayload),
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -160,6 +172,48 @@ const AddUser = () => {
                       <Input {...field} type="password" />
                     </FormControl>
                     <FormDescription>Enter user password.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormDescription>Enter user phone number.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormDescription>Enter user address.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>City</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormDescription>Enter user city.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

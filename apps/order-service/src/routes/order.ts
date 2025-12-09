@@ -47,12 +47,11 @@ export const orderRoute = async (fastify: FastifyInstance) => {
             successful: {
               $sum: {
                 $cond: [{ $eq: ["$status", "success"] }, 1, 0],
-                // {
-                //   "year":2025,
-                //   "month":9,
-                //   "total":100,
-                //   "successful":72
-                // }
+              },
+            },
+            revenue: {
+              $sum: {
+                $cond: [{ $eq: ["$status", "success"] }, "$amount", 0],
               },
             },
           },
@@ -64,6 +63,7 @@ export const orderRoute = async (fastify: FastifyInstance) => {
             month: "$_id.month",
             total: 1,
             successful: 1,
+            revenue: 1,
           },
         },
         {
@@ -101,6 +101,7 @@ export const orderRoute = async (fastify: FastifyInstance) => {
           month: monthNames[month - 1] as string,
           total: match ? match.total : 0,
           successful: match ? match.successful : 0,
+          revenue: match ? match.revenue : 0,
         });
       }
 

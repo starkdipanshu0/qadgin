@@ -24,4 +24,7 @@ export const UserFormSchema = z.object({
     .string({ message: "Password is required!" })
     .min(8, { message: "Password must be at least 8 characters!" })
     .max(50),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
 });

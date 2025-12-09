@@ -28,9 +28,15 @@ export const ProductFormSchema = z
     description: z
       .string({ message: "Description is required!" })
       .min(1, { message: "Description is required!" }),
+    tagline: z
+      .string({ message: "Tagline is required!" })
+      .min(1, { message: "Tagline is required!" }),
     price: z
       .number({ message: "Price is required!" })
       .min(1, { message: "Price is required!" }),
+    originalPrice: z
+      .number({ message: "Original Price is required!" })
+      .min(1, { message: "Original Price is required!" }),
     categorySlug: z
       .string({ message: "Category is required!" })
       .min(1, { message: "Category is required!" }),
@@ -38,6 +44,8 @@ export const ProductFormSchema = z
       message: "Image for each flavor is required!",
     }),
     flavors: z.array(z.string()).min(1, { message: "Flavor is required!" }),
+    packSize: z.array(z.string()).min(1, { message: "Pack Size is required!" }),
+    benefits: z.array(z.string()).min(1, { message: "Benefits are required!" }),
   })
   .refine(
     (data) => {
