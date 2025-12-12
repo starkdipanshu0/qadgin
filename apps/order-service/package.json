@@ -5,7 +5,9 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "dev": "tsx --env-file=.env --watch src/index.ts"
+    "dev": "tsx --env-file=.env --watch src/index.ts",
+    "build": "tsc",
+    "check-types": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",

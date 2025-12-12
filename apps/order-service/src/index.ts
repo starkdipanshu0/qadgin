@@ -4,8 +4,8 @@ import { Hono } from "hono";
 import { clerkMiddleware } from "@hono/clerk-auth";
 import { connectOrderDB } from "@repo/order-db";
 import { orderRoute } from "./routes/order";
-// import { consumer, producer } from "./utils/kafka";
-// import { runKafkaSubscriptions } from "./utils/subscriptions";
+import { consumer, producer } from "./utils/kafka";
+import { runKafkaSubscriptions } from "./utils/subscriptions";
 import { shouldBeUser } from "./middleware/authMiddleware";
 import { Context } from "hono";
 import { cors } from "hono/cors";
@@ -41,13 +41,13 @@ app.route("/", orderRoute);
 
 const start = async () => {
   try {
-    await connectOrderDB();
-    // Promise.all([
-    //   await connectOrderDB(),
-    //   await producer.connect(),
-    //   await consumer.connect(),
-    // ]);
-    // await runKafkaSubscriptions();
+    // await connectOrderDB();
+    Promise.all([
+      await connectOrderDB(),
+      await producer.connect(),
+      await consumer.connect(),
+    ]);
+    await runKafkaSubscriptions();
 
     serve(
       {
