@@ -1,42 +1,63 @@
-import Fastify from "fastify";
-import Clerk from "@clerk/fastify";
-import { shouldBeUser } from "./middleware/authMiddleware.js";
+import { serve } from "@hono/node-server";
+import "./utils/types";
+import { Hono } from "hono";
+import { clerkMiddleware } from "@hono/clerk-auth";
 import { connectOrderDB } from "@repo/order-db";
-import { orderRoute } from "./routes/order.js";
-import { consumer, producer } from "./utils/kafka.js";
-import { runKafkaSubscriptions } from "./utils/subscriptions.js";
+import { orderRoute } from "./routes/order";
+// import { consumer, producer } from "./utils/kafka";
+// import { runKafkaSubscriptions } from "./utils/subscriptions";
+import { shouldBeUser } from "./middleware/authMiddleware";
+import { Context } from "hono";
+import { cors } from "hono/cors";
 
-const fastify = Fastify();
+const app = new Hono();
 
-fastify.register(Clerk.clerkPlugin);
+app.use("*", clerkMiddleware());
+app.use(
+  "/*",
+  cors({
+    origin: ["http://localhost:3002", "http://localhost:3000"],
+    credentials: true,
+  })
+);
 
-fastify.get("/health", (request, reply) => {
-  return reply.status(200).send({
+app.get("/health", (c) => {
+  return c.json({
     status: "ok",
     uptime: process.uptime(),
     timestamp: Date.now(),
   });
 });
 
-fastify.get("/test", { preHandler: shouldBeUser }, (request, reply) => {
-  return reply.send({
+app.get("/test", shouldBeUser, (c: Context) => {
+  const userId = c.get("userId");
+  return c.json({
     message: "Order service is authenticated!",
-    userId: request.userId,
+    userId: userId,
   });
 });
 
-fastify.register(orderRoute);
+app.route("/", orderRoute);
 
 const start = async () => {
   try {
-    Promise.all([
-      await connectOrderDB(),
-      // await producer.connect(),
-      // await consumer.connect(),
-    ]);
+    await connectOrderDB();
+    // Promise.all([
+    //   await connectOrderDB(),
+    //   await producer.connect(),
+    //   await consumer.connect(),
+    // ]);
     // await runKafkaSubscriptions();
-    await fastify.listen({ port: 8001 });
-    console.log("Order service is running on port 8001");
+
+    serve(
+      {
+        fetch: app.fetch,
+        port: 8001,
+      },
+      (info) => {
+        console.log(`Order service is running on port 8001`);
+      }
+    );
   } catch (err) {
     console.log(err);
     process.exit(1);

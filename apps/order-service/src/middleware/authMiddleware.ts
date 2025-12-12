@@ -1,43 +1,38 @@
-import { FastifyReply, FastifyRequest } from "fastify";
-import Clerk from "@clerk/fastify";
-import type { CustomJwtSessionClaims } from "@repo/types";
+import { Context, Next } from "hono";
+import { getAuth } from "@hono/clerk-auth";
+import clerkClient from "../utils/clerk";
 
-declare module "fastify" {
-  interface FastifyRequest {
-    userId?: string;
+export const shouldBeUser = async (c: Context, next: Next) => {
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ message: "You are not logged in!" }, 401);
   }
-}
-
-export const shouldBeUser = async (
-  request: FastifyRequest,
-  reply: FastifyReply
-) => {
-  const { userId } = Clerk.getAuth(request);
-  if (!userId) {
-    return reply.status(401).send({ message: "You are not logged in!" });
-  }
-
-  request.userId = userId;
+  c.set("userId", auth.userId);
+  await next();
 };
 
-export const shouldBeAdmin = async (
-  request: FastifyRequest,
-  reply: FastifyReply
-) => {
-  const auth = Clerk.getAuth(request);
-  if (!auth.userId) {
-    return reply.status(401).send({ message: "You are not logged in!" });
+export const shouldBeAdmin = async (c: Context, next: Next) => {
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({ message: "You are not logged in!" }, 401);
   }
 
-  const claims = auth.sessionClaims as CustomJwtSessionClaims;
+  const claims = auth.sessionClaims as any;
+  let role = claims?.metadata?.role;
 
-  console.log("Full Claims:", JSON.stringify(claims, null, 2));
-  console.log("Unauthorized!", claims.metadata?.role);
-
-  if (claims.metadata?.role !== "admin") {
-    
-    return reply.status(403).send({ message: "Unauthorized!" });
+  if (!role) {
+    try {
+      const user = await clerkClient.users.getUser(auth.userId);
+      role = user.publicMetadata.role as "user" | "admin";
+    } catch (error) {
+      console.error("Failed to fetch user metadata", error);
+    }
   }
 
-  request.userId = auth.userId;
+  if (role !== "admin") {
+    return c.json({ message: "Unauthorized!" }, 403);
+  }
+
+  c.set("userId", auth.userId);
+  await next();
 };
