@@ -53,7 +53,7 @@ const ProductList = async ({
     <div className="w-full">
       <Categories categories={categories} />
       {params === "products" && <Filter />}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-12">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
         {products.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}

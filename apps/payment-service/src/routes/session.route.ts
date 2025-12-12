@@ -1,65 +1,89 @@
 import { Hono } from "hono";
-import stripe from "../utils/stripe";
+import { razorpay } from "../utils/razorpay";
 import { shouldBeUser } from "../middleware/authMiddleware";
 import { CartItemsType } from "@repo/types";
-import { getStripeProductPrice } from "../utils/stripeProduct";
+import { getProductPrice } from "../utils/product";
+import crypto from "crypto";
+import { producer } from "../utils/kafka";
 
 const sessionRoute = new Hono();
 
-sessionRoute.post("/create-checkout-session", shouldBeUser, async (c) => {
+sessionRoute.post("/create-order", shouldBeUser, async (c) => {
   const { cart }: { cart: CartItemsType } = await c.req.json();
   const userId = c.get("userId");
 
-  const lineItems = await Promise.all(
-    cart.map(async (item) => {
-      const unitAmount = await getStripeProductPrice(item.id);
-      return {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: item.name,
-          },
-          unit_amount: unitAmount as number,
-        },
-        quantity: item.quantity,
-      };
-    })
-  );
+  let totalAmount = 0;
+
+  // Calculate total amount by fetching prices
+  for (const item of cart) {
+    const price = await getProductPrice(item.id);
+    totalAmount += Number(price) * item.quantity;
+  }
 
   try {
-    const session = await stripe.checkout.sessions.create({
-      line_items: lineItems,
-      client_reference_id: userId,
-      mode: "payment",
-      ui_mode: "custom",
-      return_url:
-        "http://localhost:3002/return?session_id={CHECKOUT_SESSION_ID}",
+    const options = {
+      amount: totalAmount * 100, // Amount in paise
+      currency: "INR",
+      receipt: userId,
+    };
+
+    const order = await razorpay.orders.create(options);
+
+    return c.json({
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
     });
-
-    // console.log(session);
-
-    return c.json({ checkoutSessionClientSecret: session.client_secret });
   } catch (error) {
     console.log(error);
-    return c.json({ error });
+    return c.json({ error: "Error creating Razorpay order" }, 500);
   }
 });
 
-sessionRoute.get("/:session_id", async (c) => {
-  const { session_id } = c.req.param();
-  const session = await stripe.checkout.sessions.retrieve(
-    session_id as string,
-    {
-      expand: ["line_items"],
-    }
-  );
+sessionRoute.post("/verify", shouldBeUser, async (c) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, cart } = await c.req.json();
+  const userId = c.get("userId");
 
-  // console.log(session);
+  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    return c.json({ error: "Missing required parameters" }, 400);
+  }
 
-  return c.json({
-    status: session.status,
-    paymentStatus: session.payment_status,
-  });
+  const generated_signature = crypto
+    .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "")
+    .update(razorpay_order_id + "|" + razorpay_payment_id)
+    .digest("hex");
+
+  if (generated_signature === razorpay_signature) {
+    // Payment is successful
+
+    // Fetch product details for Kafka event
+    const products = await Promise.all(
+      cart.map(async (item: any) => {
+        const price = await getProductPrice(item.id);
+        return {
+          name: item.name,
+          quantity: item.quantity,
+          price: price
+        }
+      })
+    );
+
+    const totalAmount = products.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+    producer.send("payment.successful", {
+      value: {
+        userId: userId,
+        email: "", // User email not directly available here unless passed or fetched
+        amount: totalAmount * 100,
+        status: "success",
+        products: products,
+      },
+    });
+
+    return c.json({ success: true, message: "Payment verified successfully" });
+  } else {
+    return c.json({ success: false, message: "Invalid signature" }, 400);
+  }
 });
 
 export default sessionRoute;
