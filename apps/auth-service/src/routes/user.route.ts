@@ -1,23 +1,23 @@
-import { Router } from "express";
+import { Hono } from "hono";
 import clerkClient from "../utils/clerk";
 import { producer } from "../utils/kafka";
 
-const router: Router = Router();
+const app = new Hono();
 
-router.get("/", async (req, res) => {
+app.get("/", async (c) => {
   const users = await clerkClient.users.getUserList();
-  res.status(200).json(users);
+  return c.json(users);
 });
 
-router.get("/:id", async (req, res) => {
-  const { id } = req.params;
+app.get("/:id", async (c) => {
+  const id = c.req.param("id");
   const user = await clerkClient.users.getUser(id);
-  res.status(200).json(user);
+  return c.json(user);
 });
 
-router.post("/", async (req, res) => {
+app.post("/", async (c) => {
   type CreateParams = Parameters<typeof clerkClient.users.createUser>[0];
-  const newUser: CreateParams = req.body;
+  const newUser: CreateParams = await c.req.json();
   const user = await clerkClient.users.createUser(newUser);
   producer.send("user.created", {
     value: {
@@ -25,13 +25,13 @@ router.post("/", async (req, res) => {
       email: user.emailAddresses[0]?.emailAddress,
     },
   });
-  res.status(200).json(user);
+  return c.json(user);
 });
 
-router.delete("/:id", async (req, res) => {
-  const { id } = req.params;
+app.delete("/:id", async (c) => {
+  const id = c.req.param("id");
   const user = await clerkClient.users.deleteUser(id);
-  res.status(200).json(user);
+  return c.json(user);
 });
 
-export default router;
+export default app;

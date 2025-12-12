@@ -6,21 +6,18 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm dlx tsx --env-file=.env --watch src/index.ts"
-    
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@clerk/express": "^1.7.30",
-    "cors": "^2.8.5",
-    "express": "^5.0.3",
-    "@repo/kafka": "workspace:*"
+    "@hono/clerk-auth": "^3.0.3",
+    "@hono/node-server": "^1.19.0",
+    "@repo/kafka": "workspace:*",
+    "hono": "^4.9.6"
   },
   "devDependencies": {
-    "@repo/typescript-config": "workspace:*",
     "@repo/types": "workspace:*",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.3"
+    "@repo/typescript-config": "workspace:*"
   }
 }

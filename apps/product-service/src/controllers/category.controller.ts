@@ -1,47 +1,46 @@
 import { Prisma, prisma } from "@repo/product-db";
-import { Request, Response } from "express";
+import { Context } from "hono";
 
-export const createCategory = async (req: Request, res: Response) => {
-  console.log("createCategory req.body:", req.body);
-  const data: Prisma.CategoryCreateInput = req.body;
+export const createCategory = async (c: Context) => {
+  const data: Prisma.CategoryCreateInput = await c.req.json();
 
   if (!data || Object.keys(data).length === 0) {
-    return res.status(400).json({ message: "Request body is empty" });
+    return c.json({ message: "Request body is empty" }, 400);
   }
 
   try {
     const category = await prisma.category.create({ data });
-    res.status(201).json(category);
+    return c.json(category, 201);
   } catch (error) {
     console.error("Error creating category:", error);
-    res.status(500).json({ message: "Internal server error", error });
+    return c.json({ message: "Internal server error", error }, 500);
   }
 };
 
-export const updateCategory = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const data: Prisma.CategoryUpdateInput = req.body;
+export const updateCategory = async (c: Context) => {
+  const id = c.req.param("id");
+  const data: Prisma.CategoryUpdateInput = await c.req.json();
 
   const category = await prisma.category.update({
     where: { id: Number(id) },
     data,
   });
 
-  return res.status(200).json(category);
+  return c.json(category);
 };
 
-export const deleteCategory = async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const deleteCategory = async (c: Context) => {
+  const id = c.req.param("id");
 
   const category = await prisma.category.delete({
     where: { id: Number(id) },
   });
 
-  return res.status(200).json(category);
+  return c.json(category);
 };
 
-export const getCategories = async (req: Request, res: Response) => {
+export const getCategories = async (c: Context) => {
   const categories = await prisma.category.findMany();
 
-  return res.status(200).json(categories);
+  return c.json(categories);
 };

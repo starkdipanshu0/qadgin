@@ -1,33 +1,31 @@
-import { Request, Response } from "express";
+import { Context } from "hono";
 import { prisma, Prisma } from "@repo/product-db";
 import { producer } from "../utils/kafka";
 import { StripeProductType } from "@repo/types";
 
-export const createProduct = async (req: Request, res: Response) => {
-  const data: Prisma.ProductCreateInput = req.body;
+export const createProduct = async (c: Context) => {
+  const data: Prisma.ProductCreateInput = await c.req.json();
 
   const { flavors, images } = data;
 
   if (!flavors || !Array.isArray(flavors) || flavors.length === 0) {
-    return res.status(400).json({ message: "Flavors array is required!" });
+    return c.json({ message: "Flavors array is required!" }, 400);
   }
 
   if (!images || typeof images !== "object" || Array.isArray(images)) {
-    return res.status(400).json({ message: "Images object is required!" });
+    return c.json({ message: "Images object is required!" }, 400);
   }
 
   const imagesObj = images as Record<string, any>;
 
   if (!imagesObj.main) {
-    return res.status(400).json({ message: "Main image is required!" });
+    return c.json({ message: "Main image is required!" }, 400);
   }
 
   const missingFlavors = flavors.filter((flavor) => !(flavor in imagesObj));
 
   if (missingFlavors.length > 0) {
-    return res
-      .status(400)
-      .json({ message: "Missing images for flavors!", missingFlavors });
+    return c.json({ message: "Missing images for flavors!", missingFlavors }, 400);
   }
 
   const product = await prisma.product.create({ data });
@@ -39,23 +37,23 @@ export const createProduct = async (req: Request, res: Response) => {
   };
 
   producer.send("product.created", { value: stripeProduct });
-  res.status(201).json(product);
+  return c.json(product, 201);
 };
 
-export const updateProduct = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const data: Prisma.ProductUpdateInput = req.body;
+export const updateProduct = async (c: Context) => {
+  const id = c.req.param("id");
+  const data: Prisma.ProductUpdateInput = await c.req.json();
 
   const updatedProduct = await prisma.product.update({
     where: { id: Number(id) },
     data,
   });
 
-  return res.status(200).json(updatedProduct);
+  return c.json(updatedProduct);
 };
 
-export const deleteProduct = async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const deleteProduct = async (c: Context) => {
+  const id = c.req.param("id");
 
   const deletedProduct = await prisma.product.delete({
     where: { id: Number(id) },
@@ -63,36 +61,32 @@ export const deleteProduct = async (req: Request, res: Response) => {
 
   producer.send("product.deleted", { value: Number(id) });
 
-  return res.status(200).json(deletedProduct);
+  return c.json(deletedProduct);
 };
 
-export const getProducts = async (req: Request, res: Response) => {
-  const { sort, category, search, limit } = req.query;
+export const getProducts = async (c: Context) => {
+  const { sort, category, search, limit } = c.req.query();
 
   const orderBy = (() => {
     switch (sort) {
       case "asc":
         return { price: Prisma.SortOrder.asc };
-        break;
       case "desc":
         return { price: Prisma.SortOrder.desc };
-        break;
       case "oldest":
         return { createdAt: Prisma.SortOrder.asc };
-        break;
       default:
         return { createdAt: Prisma.SortOrder.desc };
-        break;
     }
   })();
 
   const products = await prisma.product.findMany({
     where: {
       category: {
-        slug: category as string,
+        slug: category,
       },
       name: {
-        contains: search as string,
+        contains: search,
         mode: "insensitive",
       },
     },
@@ -100,15 +94,15 @@ export const getProducts = async (req: Request, res: Response) => {
     take: limit ? Number(limit) : undefined,
   });
 
-  res.status(200).json(products);
+  return c.json(products);
 };
 
-export const getProduct = async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const getProduct = async (c: Context) => {
+  const id = c.req.param("id");
 
   const product = await prisma.product.findUnique({
     where: { id: Number(id) },
   });
 
-  return res.status(200).json(product);
+  return c.json(product);
 };
