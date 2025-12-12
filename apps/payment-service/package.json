@@ -1,10 +1,12 @@
 {
   "name": "payment-service",
+  "main": "dist/index.js",
   "type": "module",
   "scripts": {
     "dev": "tsx --env-file=.env --watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@hono/clerk-auth": "^3.0.3",
