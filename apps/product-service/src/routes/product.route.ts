@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Hono } from "hono";
 import {
   createProduct,
   deleteProduct,
@@ -8,12 +8,12 @@ import {
 } from "../controllers/product.controller";
 import { shouldBeAdmin } from "../middleware/authMiddleware";
 
-const router: Router = Router();
+const app = new Hono();
 
-router.post("/", createProduct);
-router.put("/:id", shouldBeAdmin, updateProduct);
-router.delete("/:id", shouldBeAdmin, deleteProduct);
-router.get("/", getProducts);
-router.get("/:id", getProduct);
+app.post("/", shouldBeAdmin, createProduct);
+app.put("/:id", shouldBeAdmin, updateProduct);
+app.delete("/:id", shouldBeAdmin, deleteProduct);
+app.get("/", getProducts);
+app.get("/:id", getProduct);
 
-export default router;
+export default app;

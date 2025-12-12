@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Hono } from "hono";
 import {
   createCategory,
   deleteCategory,
@@ -7,11 +7,11 @@ import {
 } from "../controllers/category.controller";
 import { shouldBeAdmin } from "../middleware/authMiddleware";
 
-const router: Router = Router();
+const app = new Hono();
 
-router.post("/", createCategory);
-router.put("/:id", shouldBeAdmin, updateCategory);
-router.delete("/:id", shouldBeAdmin, deleteCategory);
-router.get("/", getCategories);
+app.post("/", shouldBeAdmin, createCategory);
+app.put("/:id", shouldBeAdmin, updateCategory);
+app.delete("/:id", shouldBeAdmin, deleteCategory);
+app.get("/", getCategories);
 
-export default router;
+export default app;
