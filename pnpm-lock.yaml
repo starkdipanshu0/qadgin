@@ -310,6 +310,9 @@ importers:
 
   apps/payment-service:
     dependencies:
+      '@clerk/backend':
+        specifier: ^2.27.0
+        version: 2.27.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@hono/clerk-auth':
         specifier: ^3.0.3
         version: 3.0.3(hono@4.9.6)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)

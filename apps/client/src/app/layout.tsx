@@ -34,6 +34,9 @@ export default function RootLayout({
           className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-gray-900`}
           suppressHydrationWarning
         >
+          {/* Razorpay Script */}
+          <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
+
           <DebugToken />
           {/* 🔥 Navbar should be full width */}
           <Navbar />

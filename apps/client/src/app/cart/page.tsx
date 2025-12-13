@@ -1,7 +1,7 @@
 "use client";
 
 import ShippingForm from "@/components/ShippingForm";
-import StripePaymentForm from "@/components/StripePaymentForm";
+import RazorpayPayment from "@/components/RazorpayPayment";
 import useCartStore from "@/stores/cartStore";
 import { ShippingFormInputs } from "@repo/types";
 import {
@@ -160,7 +160,7 @@ const CartPage = () => {
                     ) : activeStep === 3 && shippingForm ? (
                         <div className="animate-fade-in">
                             <h2 className="text-2xl font-light mb-8">Secure Payment</h2>
-                            <StripePaymentForm shippingForm={shippingForm} />
+                            <RazorpayPayment shippingForm={shippingForm} />
                         </div>
                     ) : null}
                 </div>

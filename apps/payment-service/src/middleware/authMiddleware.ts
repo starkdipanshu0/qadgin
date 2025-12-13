@@ -33,8 +33,21 @@ export const shouldBeAdmin = createMiddleware<{
   }
 
   const claims = auth.sessionClaims as CustomJwtSessionClaims;
+  let role = claims?.metadata?.role;
 
-  if (claims.metadata?.role !== "admin") {
+  if (!role) {
+    try {
+      // Lazy load clerkClient to avoid circular dependency issues if imported top-level before env load
+      const clerkClient = (await import("../utils/clerk")).default;
+      const user = await clerkClient.users.getUser(auth.userId);
+      console.log("Fetched role from Clerk API:", user.publicMetadata.role);
+      role = user.publicMetadata.role as "user" | "admin";
+    } catch (error) {
+      console.error("Failed to fetch user metadata", error);
+    }
+  }
+
+  if (role !== "admin") {
     return c.json({ message: "Unauthorized!" });
   }
 

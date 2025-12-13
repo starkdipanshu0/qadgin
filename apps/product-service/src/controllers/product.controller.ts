@@ -102,10 +102,17 @@ export const getProducts = async (c: Context) => {
 
 export const getProduct = async (c: Context) => {
   const id = c.req.param("id");
+  console.log(`PRODUCT-SERVICE: Fetching product with ID: ${id}`);
 
   const product = await prisma.product.findUnique({
     where: { id: Number(id) },
   });
+
+  if (!product) {
+    console.log(`PRODUCT-SERVICE: Product ${id} not found`);
+  } else {
+    console.log(`PRODUCT-SERVICE: Found product ${id}, Price: ${product.price}`);
+  }
 
   return c.json(product);
 };

@@ -3,6 +3,7 @@ import { shouldBeAdmin, shouldBeUser } from "../middleware/authMiddleware";
 import { prisma } from "@repo/order-db";
 import { startOfMonth, subMonths } from "date-fns";
 import { OrderChartType } from "@repo/types";
+import { createOrder } from "../utils/order";
 
 export const orderRoute = new Hono();
 
@@ -102,4 +103,24 @@ orderRoute.get("/order-chart", shouldBeAdmin, async (c) => {
   }
 
   return c.json(results);
+});
+
+// Internal route for synchronous order creation (replacing Kafka)
+orderRoute.post("/internal/create", async (c) => {
+  console.log("ORDER-SERVICE: Received /internal/create request");
+  try {
+    // Authenticate technically (e.g. check for a secret header if we wanted security, 
+    // but for now relying on internal network/logic as per instructions to keep it simple first)
+    const orderData = await c.req.json();
+    console.log("ORDER-SERVICE: Creating Order for User:", orderData.userId);
+
+    // Use the existing logic
+    await createOrder(orderData);
+    console.log("ORDER-SERVICE: Order successfully created in DB");
+
+    return c.json({ success: true, message: "Order created successfully" }, 201);
+  } catch (error) {
+    console.error("ORDER-SERVICE: Failed to create order:", error);
+    return c.json({ success: false, message: "Failed to create order" }, 500);
+  }
 });

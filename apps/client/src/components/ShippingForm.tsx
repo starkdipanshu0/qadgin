@@ -20,6 +20,7 @@ const ShippingForm = ({
   const router = useRouter();
 
   const handleShippingForm: SubmitHandler<ShippingFormInputs> = (data) => {
+    console.log(data);
     setShippingForm(data);
     router.push("/cart?step=3", { scroll: false });
   };
@@ -88,7 +89,7 @@ const ShippingForm = ({
               type="text"
               placeholder="Pincode (e.g. 560034)"
               maxLength={6}
-              // {...register("pincode")} 
+              {...register("pincode")}
               className="w-full bg-stone-50 border border-stone-200 rounded-xl py-3 pl-10 pr-4 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-stone-400 text-stone-800 text-sm font-medium"
             />
           </div>
@@ -122,13 +123,13 @@ const ShippingForm = ({
             <input
               type="text"
               placeholder="Landmark (Optional)"
-              // {...register("landmark")} 
+              {...register("landmark")}
               className="w-full bg-stone-50 border border-stone-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-stone-400 text-stone-800 text-sm font-medium"
             />
           </div>
           <div className="relative group">
             <select
-              // {...register("state")} 
+              {...register("state")}
               defaultValue=""
               className="w-full bg-stone-50 border border-stone-200 rounded-xl py-3 px-4 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-stone-800 text-sm font-medium appearance-none"
             >

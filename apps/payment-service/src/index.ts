@@ -4,6 +4,7 @@ import { clerkMiddleware } from "@hono/clerk-auth";
 import sessionRoute from "./routes/session.route.js";
 import { cors } from "hono/cors";
 import webhookRoute from "./routes/webhooks.route.js";
+import { shouldBeAdmin } from "./middleware/authMiddleware.js";
 
 const app = new Hono();
 app.use("*", clerkMiddleware());
@@ -16,6 +17,13 @@ app.get("/health", (c) => {
     timestamp: Date.now(),
   });
 });
+app.get("test-admin", shouldBeAdmin, (c) => {
+  return c.json({
+    status: "ok",
+    uptime: process.uptime(),
+    timestamp: Date.now(),
+  });
+})
 
 app.route("/sessions", sessionRoute);
 app.route("/webhooks", webhookRoute);
@@ -24,7 +32,6 @@ app.route("/webhooks", webhookRoute);
 
 const start = async () => {
   try {
-    // Promise.all([await producer.connect()]);
     serve(
       {
         fetch: app.fetch,

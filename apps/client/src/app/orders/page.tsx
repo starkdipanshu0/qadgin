@@ -31,12 +31,12 @@ const OrdersPage = async () => {
       <h1 className="text-2xl my-4 font-medium">Your Orders</h1>
       <ul>
         {orders.map((order) => (
-          <li key={order._id} className="flex items-center mb-4">
+          <li key={order.id} className="flex items-center mb-4">
             <div className="w-1/4">
               <span className="font-medium text-sm text-gray-500">
                 Order ID
               </span>
-              <p>{order._id}</p>
+              <p>{order.id}</p>
             </div>
             <div className="w-1/12">
               <span className="font-medium text-sm text-gray-500">Total</span>
