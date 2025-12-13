@@ -3,7 +3,6 @@ import { Hono } from "hono";
 import { clerkMiddleware } from "@hono/clerk-auth";
 import sessionRoute from "./routes/session.route.js";
 import { cors } from "hono/cors";
-import { producer } from "./utils/kafka.js";
 import webhookRoute from "./routes/webhooks.route.js";
 
 const app = new Hono();
@@ -25,7 +24,7 @@ app.route("/webhooks", webhookRoute);
 
 const start = async () => {
   try {
-    Promise.all([await producer.connect()]);
+    // Promise.all([await producer.connect()]);
     serve(
       {
         fetch: app.fetch,

@@ -1,8 +1,6 @@
-import { OrderSchemaType } from "@repo/order-db";
+import { Order } from "@repo/order-db";
 
-export type OrderType = OrderSchemaType & {
-  _id: string;
-};
+export type OrderType = Order;
 
 export type OrderChartType = {
   month: string;

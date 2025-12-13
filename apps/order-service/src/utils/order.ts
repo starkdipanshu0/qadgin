@@ -1,6 +1,5 @@
-import { Order } from "@repo/order-db";
+import { prisma } from "@repo/order-db";
 import { OrderType } from "@repo/types";
-import { producer } from "./kafka";
 import clerkClient from "./clerk";
 
 export const createOrder = async (order: OrderType) => {
@@ -17,17 +16,17 @@ export const createOrder = async (order: OrderType) => {
     }
   }
 
-  const newOrder = new Order(order);
-
   try {
-    const savedOrder = await newOrder.save();
-    producer.send("order.created", {
-      value: {
-        email: savedOrder.email,
-        amount: savedOrder.amount,
-        status: savedOrder.status,
+    const savedOrder = await prisma.order.create({
+      data: {
+        userId: order.userId,
+        email: order.email!,
+        amount: order.amount,
+        status: order.status,
+        products: order.products,
       },
     });
+
   } catch (error) {
     console.log(error);
     throw error;

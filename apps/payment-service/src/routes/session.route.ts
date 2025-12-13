@@ -4,7 +4,6 @@ import { shouldBeUser } from "../middleware/authMiddleware";
 import { CartItemsType } from "@repo/types";
 import { getProductPrice } from "../utils/product";
 import crypto from "crypto";
-import { producer } from "../utils/kafka";
 
 const sessionRoute = new Hono();
 
@@ -70,15 +69,7 @@ sessionRoute.post("/verify", shouldBeUser, async (c) => {
 
     const totalAmount = products.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 
-    producer.send("payment.successful", {
-      value: {
-        userId: userId,
-        email: "", // User email not directly available here unless passed or fetched
-        amount: totalAmount * 100,
-        status: "success",
-        products: products,
-      },
-    });
+
 
     return c.json({ success: true, message: "Payment verified successfully" });
   } else {

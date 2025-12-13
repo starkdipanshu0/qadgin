@@ -4,7 +4,6 @@ import { cors } from "hono/cors";
 import { clerkMiddleware } from "@hono/clerk-auth";
 import { shouldBeAdmin } from "./middleware/authMiddleware.js";
 import userRoute from "./routes/user.route.js";
-import { producer } from "./utils/kafka.js";
 
 const app = new Hono();
 
@@ -38,7 +37,7 @@ app.onError((err, c) => {
 
 const start = async () => {
   try {
-    await producer.connect();
+    // await producer.connect();
     console.log("Auth service is running on 8003");
     serve({
       fetch: app.fetch,

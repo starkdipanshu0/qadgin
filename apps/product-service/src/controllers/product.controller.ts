@@ -1,6 +1,5 @@
 import { Context } from "hono";
 import { prisma, Prisma } from "@repo/product-db";
-import { producer } from "../utils/kafka";
 import { StripeProductType } from "@repo/types";
 
 export const createProduct = async (c: Context) => {
@@ -36,7 +35,9 @@ export const createProduct = async (c: Context) => {
     price: product.price,
   };
 
+  /*
   producer.send("product.created", { value: stripeProduct });
+  */
   return c.json(product, 201);
 };
 
@@ -59,7 +60,9 @@ export const deleteProduct = async (c: Context) => {
     where: { id: Number(id) },
   });
 
+  /*
   producer.send("product.deleted", { value: Number(id) });
+  */
 
   return c.json(deletedProduct);
 };
