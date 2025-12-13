@@ -1,5 +1,6 @@
 import AppSidebar from "@/components/AppSidebar";
 import Navbar from "@/components/Navbar";
+import ClientOnly from "@/components/ClientOnly";
 import QueryProvider from "@/components/providers/QueryProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -24,7 +25,9 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <SidebarProvider defaultOpen={defaultOpen}>
-            <AppSidebar />
+            <ClientOnly>
+              <AppSidebar />
+            </ClientOnly>
             <main className="w-full">
               <Navbar />
               <div className="px-4">{children}</div>

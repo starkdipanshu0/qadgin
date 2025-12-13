@@ -45,7 +45,7 @@ export const columns: ColumnDef<OrderType>[] = [
     ),
   },
   {
-    accessorKey: "_id",
+    accessorKey: "id",
     header: "ID",
   },
   {
@@ -90,7 +90,7 @@ export const columns: ColumnDef<OrderType>[] = [
       const formatted = new Intl.NumberFormat("en-US", {
         style: "currency",
         currency: "USD",
-      }).format(amount/100);
+      }).format(amount / 100);
 
       return <div className="text-right font-medium">{formatted}</div>;
     },
@@ -111,7 +111,7 @@ export const columns: ColumnDef<OrderType>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(order._id)}
+              onClick={() => navigator.clipboard.writeText(order.id)}
             >
               Copy order ID
             </DropdownMenuItem>

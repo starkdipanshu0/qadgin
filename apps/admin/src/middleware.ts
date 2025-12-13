@@ -1,4 +1,4 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { clerkClient, clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { CustomJwtSessionClaims } from "@repo/types";
 
 const isPublicRoute = createRouteMatcher(["/sign-in(.*)", "/unauthorized(.*)"]);
@@ -9,13 +9,25 @@ export default clerkMiddleware(async (auth, req) => {
 
     const { userId, sessionClaims } = await auth();
 
-    // if (userId && sessionClaims) {
-    //   const userRole = (sessionClaims as CustomJwtSessionClaims).metadata?.role ?? (sessionClaims as any).public_metadata?.role;
-    //   console.log("userRole ", userRole);
-    //   if (userRole !== "admin") {
-    //     return Response.redirect(new URL("/unauthorized", req.url));
-    //   }
-    // }
+    if (userId && sessionClaims) {
+      const client = await clerkClient();
+
+      let userRole = (sessionClaims as CustomJwtSessionClaims).metadata?.role ?? (sessionClaims as any).public_metadata?.role;
+
+      if (!userRole) {
+        try {
+          const user = await client.users.getUser(userId);
+          userRole = user.publicMetadata?.role as "admin" | "user" | undefined;
+        } catch (error) {
+          console.error("Failed to fetch user role from Clerk:", error);
+        }
+      }
+
+      console.log("userRole ", userRole);
+      if (userRole !== "admin") {
+        return Response.redirect(new URL("/unauthorized", req.url));
+      }
+    }
   }
 });
 

@@ -57,7 +57,7 @@ export const columns: ColumnDef<ProductType>[] = [
           <Image
             src={
               (product.images as Record<string, string>)?.[
-                product.colors[0] || ""
+              product.flavors?.[0] || ""
               ] || ""
             }
             alt={product.name}
