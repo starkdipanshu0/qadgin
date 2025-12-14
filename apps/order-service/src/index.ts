@@ -1,5 +1,4 @@
 import { serve } from "@hono/node-server";
-import { prisma } from "@repo/order-db";
 import "./utils/types";
 import { Hono } from "hono";
 import { clerkMiddleware } from "@hono/clerk-auth";
@@ -40,7 +39,8 @@ app.route("/", orderRoute);
 
 const start = async () => {
   try {
-    await prisma.$connect();
+    // Drizzle/Neon connection is serverless friendly and usually established on query or via singleton
+    // No explicit .connect() needed usually for neon-serverless, but if using pooled, it manages itself.
 
     serve(
       {

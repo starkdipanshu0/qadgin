@@ -11,7 +11,7 @@ import { toast } from "react-toastify";
 const ProductCard = ({ product }: { product: ProductType }) => {
   // 1. Keep track of the selection
   const [selectedFlavor, setSelectedFlavor] = useState<string>(
-    product.flavors[0] || ""
+    product.flavors?.[0] || ""
   );
 
   const { addToCart } = useCartStore();
@@ -38,7 +38,8 @@ const ProductCard = ({ product }: { product: ProductType }) => {
       ...product,
       quantity: 1,
       selectedSize: product.packSize?.[0] || "",
-      originalPrice: product.originalPrice || 0,
+      price: Number(product.price),
+      originalPrice: Number(product.originalPrice || 0),
       isBestSeller: product.isBestSeller ?? false,
       selectedColor: selectedFlavor,
     });
@@ -51,7 +52,8 @@ const ProductCard = ({ product }: { product: ProductType }) => {
       ...product,
       quantity: 1,
       selectedSize: product.packSize?.[0] || "",
-      originalPrice: product.originalPrice || 0,
+      price: Number(product.price),
+      originalPrice: Number(product.originalPrice || 0),
       isBestSeller: product.isBestSeller ?? false,
       selectedColor: selectedFlavor,
     });

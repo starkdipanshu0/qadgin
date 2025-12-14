@@ -15,11 +15,24 @@ const fetchData = async ({
   search?: string;
   params: "homepage" | "products";
 }) => {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_PRODUCT_SERVICE_URL}/products?${category ? `category=${category}` : ""}${search ? `&search=${search}` : ""}&sort=${sort || "newest"}${params === "homepage" ? "&limit=8" : ""}`
-  );
-  const data: ProductsType = await res.json();
-  return data;
+  try {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_PRODUCT_SERVICE_URL}/products?${category ? `category=${category}` : ""}${search ? `&search=${search}` : ""}&sort=${sort || "newest"}${params === "homepage" ? "&limit=8" : ""}`
+    );
+    if (!res.ok) {
+      console.error("Failed to fetch products:", res.status, res.statusText);
+      return [];
+    }
+    const data: ProductsType = await res.json();
+    if (!Array.isArray(data)) {
+      console.error("Fetched products data is not an array:", data);
+      return [];
+    }
+    return data;
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    return [];
+  }
 };
 
 const fetchCategories = async () => {
@@ -54,9 +67,15 @@ const ProductList = async ({
       <Categories categories={categories} />
       {params === "products" && <Filter />}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
+        {Array.isArray(products) && products.length > 0 ? (
+          products.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))
+        ) : (
+          <div className="col-span-full text-center py-10">
+            <p className="text-gray-500 text-lg">No products found.</p>
+          </div>
+        )}
       </div>
       <Link
         href={category ? `/products/?category=${category}` : "/products"}

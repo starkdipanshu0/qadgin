@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { shouldBeAdmin, shouldBeUser } from "../middleware/authMiddleware";
-import { prisma } from "@repo/order-db";
+import { db, orders } from "@repo/db";
+import { desc, eq, sql, and, gte, lte } from "drizzle-orm";
 import { startOfMonth, subMonths } from "date-fns";
 import { OrderChartType } from "@repo/types";
 import { createOrder } from "../utils/order";
@@ -9,64 +10,42 @@ export const orderRoute = new Hono();
 
 orderRoute.get("/user-orders", shouldBeUser, async (c) => {
   const userId = c.get("userId");
-  const orders = await prisma.order.findMany({ where: { userId } });
-  return c.json(orders);
+  const userOrders = await db
+    .select()
+    .from(orders)
+    .where(eq(orders.userId, userId));
+  return c.json(userOrders);
 });
 
 orderRoute.get("/orders", shouldBeAdmin, async (c) => {
   const limit = c.req.query("limit") ? Number(c.req.query("limit")) : 10;
-  const orders = await prisma.order.findMany({
-    take: limit,
-    orderBy: { createdAt: "desc" },
-  });
-  return c.json(orders);
+  const allOrders = await db
+    .select()
+    .from(orders)
+    .limit(limit)
+    .orderBy(desc(orders.createdAt));
+  return c.json(allOrders);
 });
 
 orderRoute.get("/order-chart", shouldBeAdmin, async (c) => {
   const now = new Date();
   const sixMonthsAgo = startOfMonth(subMonths(now, 5));
 
-  const raw = (await prisma.order.aggregateRaw({
-    pipeline: [
-      {
-        $match: {
-          createdAt: { $gte: sixMonthsAgo, $lte: now },
-        },
-      },
-      {
-        $group: {
-          _id: {
-            year: { $year: "$createdAt" },
-            month: { $month: "$createdAt" },
-          },
-          total: { $sum: 1 },
-          successful: {
-            $sum: {
-              $cond: [{ $eq: ["$status", "success"] }, 1, 0],
-            },
-          },
-          revenue: {
-            $sum: {
-              $cond: [{ $eq: ["$status", "success"] }, "$amount", 0],
-            },
-          },
-        },
-      },
-      {
-        $project: {
-          _id: 0,
-          year: "$_id.year",
-          month: "$_id.month",
-          total: 1,
-          successful: 1,
-          revenue: 1,
-        },
-      },
-      {
-        $sort: { year: 1, month: 1 },
-      },
-    ],
-  })) as unknown as any[];
+  // Postgres aggregation
+  const query = sql`
+    SELECT 
+      EXTRACT(YEAR FROM created_at) as year, 
+      EXTRACT(MONTH FROM created_at) as month,
+      COUNT(*) as total,
+      SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful,
+      SUM(CASE WHEN status = 'success' THEN amount ELSE 0 END) as revenue
+    FROM ${orders}
+    WHERE created_at >= ${sixMonthsAgo} AND created_at <= ${now}
+    GROUP BY year, month
+    ORDER BY year, month
+  `;
+
+  const raw = await db.execute(query);
 
   const monthNames = [
     "January",
@@ -90,15 +69,18 @@ orderRoute.get("/order-chart", shouldBeAdmin, async (c) => {
     const year = d.getFullYear();
     const month = d.getMonth() + 1;
 
-    const match = raw.find(
-      (item) => item.year === year && item.month === month
+    // db.execute with neon-http returns an object with rows
+    const rows = (raw as any).rows ?? [];
+
+    const match = rows.find(
+      (item: any) => Number(item.year) === year && Number(item.month) === month
     );
 
     results.push({
       month: monthNames[month - 1] as string,
-      total: match ? match.total : 0,
-      successful: match ? match.successful : 0,
-      revenue: match ? match.revenue : 0,
+      total: match ? Number(match.total) : 0,
+      successful: match ? Number(match.successful) : 0,
+      revenue: match ? Number(match.revenue) : 0,
     });
   }
 

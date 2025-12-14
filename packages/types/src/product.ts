@@ -1,11 +1,17 @@
-import type { Product, Category } from "@repo/product-db";
+import { products, categories } from "@repo/db";
+import { type InferSelectModel } from "drizzle-orm";
 import z from "zod";
 
-export type ProductType = Omit<Product, "images"> & {
+export type Product = InferSelectModel<typeof products>;
+export type Category = InferSelectModel<typeof categories>;
+
+export type ProductType = Omit<Product, "images" | "price" | "originalPrice"> & {
   images: {
     main: string;
     [key: string]: string | string[];
   };
+  price: number;
+  originalPrice: number | null;
 };
 
 export type ProductsType = ProductType[];

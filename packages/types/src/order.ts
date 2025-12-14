@@ -1,6 +1,20 @@
-import { Order } from "@repo/order-db";
+export interface OrderProductType {
+  productId: number;
+  name: string;
+  quantity: number;
+  price: number;
+  image?: string;
+}
 
-export type OrderType = Order;
+export interface OrderType {
+  id?: number;
+  userId: string;
+  email?: string;
+  amount: number;
+  status: string;
+  createdAt?: Date;
+  products: OrderProductType[];
+}
 
 export type OrderChartType = {
   month: string;

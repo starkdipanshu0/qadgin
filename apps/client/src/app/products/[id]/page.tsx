@@ -12,7 +12,12 @@ const fetchProduct = async (id: string) => {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_PRODUCT_SERVICE_URL}/products/${id}`);
     if (!res.ok) return undefined;
-    const product: ProductType = await res.json();
+    const rawProduct = await res.json();
+    const product: ProductType = {
+      ...rawProduct,
+      price: Number(rawProduct.price),
+      originalPrice: rawProduct.originalPrice ? Number(rawProduct.originalPrice) : null,
+    };
     return product;
   } catch (error) {
     console.error("Failed to fetch product:", error);
@@ -32,7 +37,7 @@ export const generateMetadata = async ({
 
   return {
     title: `${product.name} | Qadgin Wellness`,
-    description: product.shortDescription || product.description.substring(0, 150),
+    description: product.shortDescription || (product.description || "").substring(0, 150),
   };
 };
 

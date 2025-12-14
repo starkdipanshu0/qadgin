@@ -1,7 +1,7 @@
-import type { Product } from "@repo/product-db";
+import { type ProductType } from "./product";
 import z from "zod";
 
-export type CartItemType = Product & {
+export type CartItemType = ProductType & {
   quantity: number;
   selectedSize: string;
   selectedColor: string;
@@ -11,7 +11,7 @@ export type CartItemsType = CartItemType[];
 
 export const shippingFormSchema = z.object({
   name: z.string().min(2, "Please enter your full name"),
-  
+
   email: z
     .string()
     .min(1, "Email is required!")
