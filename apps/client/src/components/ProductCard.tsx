@@ -8,54 +8,102 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "react-toastify";
 
+// Helper to safely get first attribute
+const getFirstAttr = (product: ProductType, keys: string[]) => {
+  if (!product.attributes) return "";
+  for (const key of keys) {
+    // Safe access with optional chaining
+    const attr = product.attributes?.[key];
+    if (attr && attr.length > 0) return attr[0];
+  }
+  return "";
+};
+
 const ProductCard = ({ product }: { product: ProductType }) => {
   // 1. Keep track of the selection
-  const [selectedFlavor, setSelectedFlavor] = useState<string>(
-    product.flavors?.[0] || ""
-  );
+  // Try 'Flavor' then 'Color' then 'Variant'
+  const defaultFlavor = getFirstAttr(product, ["Flavor", "Color", "Variant"]);
+  const [selectedFlavor, setSelectedFlavor] = useState<string>(defaultFlavor || "");
 
   const { addToCart } = useCartStore();
 
   // 2. CALCULATE IMAGE (Derived State)
   const getDisplayImage = (): string => {
-    const flavorImage = product.images[selectedFlavor];
+    // Safety check
+    if (!product.images) return "";
 
-    // Case A: Flavor has specific images (Array) -> Return first one
-    if (Array.isArray(flavorImage) && flavorImage.length > 0) {
-      return flavorImage[0] as string;
+    // New Logic: Check relational Variants for the image
+    if (product.variants && selectedFlavor) {
+      const matchingVariant = product.variants.find((v) => {
+        if (!v.attributes) return false;
+        // Check if any attribute value matches the selected string (e.g. "Red")
+        // Attributes are { Key: ["Value"] }
+        return Object.values(v.attributes).some((values) =>
+          Array.isArray(values) && values.includes(selectedFlavor)
+        );
+      });
+
+      if (matchingVariant?.images?.main) {
+        return matchingVariant.images.main;
+      }
     }
 
-    // Case B: Fallback to Main Image (String) -> Safety check for empty string
-    return (product.images.main);
+    // Fallback to Main Product Link
+    return product.images.main || "";
   };
 
   const displayImage = getDisplayImage();
-  console.log("ProductCard Image:", { id: product.id, name: product.name, displayImage });
+
+  // 3. CALCULATE URL (Standard vs Virtual)
+  // If virtual, we want to preserve the variant I D in the slug: /products/my-slug-v-123
+  const getProductUrl = () => {
+    if (product.isVirtual && product.variantId) {
+      // Prefer slug if available, else ID
+      const base = product.slug || product.id;
+      return `/products/${base}-v-${product.variantId}`;
+    }
+    // Standard Product
+    return `/products/${product.slug || product.id}`;
+  };
+
+  const productUrl = getProductUrl();
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
+    const size = getFirstAttr(product, ["Size", "Weight", "Pack Size"]);
+
+    // Sanitize Payload: Don't store heavy 'variants' or 'content' in Cart
+    // Also ensure numeric prices
     addToCart({
       ...product,
+      variants: undefined, // Remove variants from cart item
+      content: null, // Keep cart lightweight
+      listingConfig: null,
       quantity: 1,
-      selectedSize: product.packSize?.[0] || "",
+      selectedSize: size || "",
       price: Number(product.price),
       originalPrice: Number(product.originalPrice || 0),
       isBestSeller: product.isBestSeller ?? false,
-      selectedColor: selectedFlavor,
+      selectedColor: selectedFlavor || "",
     });
     toast.success("Added to cart");
   };
 
   const handleBuyNow = (e: React.MouseEvent) => {
     e.preventDefault();
+    const size = getFirstAttr(product, ["Size", "Weight", "Pack Size"]);
+
     addToCart({
       ...product,
+      variants: undefined,
+      content: null,
+      listingConfig: null,
       quantity: 1,
-      selectedSize: product.packSize?.[0] || "",
+      selectedSize: size || "",
       price: Number(product.price),
       originalPrice: Number(product.originalPrice || 0),
       isBestSeller: product.isBestSeller ?? false,
-      selectedColor: selectedFlavor,
+      selectedColor: selectedFlavor || "",
     });
     toast.success("Redirecting to checkout...");
   };
@@ -64,7 +112,7 @@ const ProductCard = ({ product }: { product: ProductType }) => {
     <div className="group flex flex-col bg-white rounded-xl border border-stone-100 overflow-hidden hover:shadow-lg transition-all duration-300">
       {/* 1. IMAGE SECTION */}
       <Link
-        href={`/products/${product.id}`}
+        href={productUrl}
         className="relative bg-stone-50 aspect-[4/5] overflow-hidden block"
       >
         {/* --- BADGES CONTAINER --- */}
@@ -75,12 +123,12 @@ const ProductCard = ({ product }: { product: ProductType }) => {
             </span>
           )}
 
-          {product.originalPrice && product.originalPrice > product.price && (
+          {Number(product.originalPrice) > Number(product.price) && (
             <span className="ml-2 mt-1 bg-white/90 backdrop-blur text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-md border border-stone-100 shadow-sm">
               -
               {Math.round(
-                ((product.originalPrice - product.price) /
-                  product.originalPrice) *
+                ((Number(product.originalPrice) - Number(product.price)) /
+                  Number(product.originalPrice)) *
                 100
               )}
               %
@@ -112,7 +160,7 @@ const ProductCard = ({ product }: { product: ProductType }) => {
         </p>
 
         {/* Name */}
-        <Link href={`/products/${product.id}`}>
+        <Link href={productUrl}>
           <h3 className="text-sm font-semibold text-stone-800 leading-tight line-clamp-2 hover:text-emerald-700 transition-colors">
             {product.name}
           </h3>
@@ -123,7 +171,7 @@ const ProductCard = ({ product }: { product: ProductType }) => {
           {/* Price Column */}
           <div className="flex flex-col leading-none mb-1">
             <span className="text-xs text-stone-400 font-medium mb-0.5">
-              {product.packSize?.[0] || ""}
+              {getFirstAttr(product, ["Size", "Weight", "Pack Size"])}
             </span>
             <div className="flex items-center gap-1.5">
               <span className="text-lg font-bold text-stone-900">

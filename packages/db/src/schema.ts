@@ -1,11 +1,40 @@
-
-import { pgTable, text, serial, timestamp, integer, boolean, pgEnum, decimal, json } from "drizzle-orm/pg-core";
+import {
+    pgTable,
+    text,
+    serial,
+    timestamp,
+    integer,
+    boolean,
+    pgEnum,
+    decimal,
+    json,
+} from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
-// Enums
-export const orderStatusEnum = pgEnum("order_status", ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"]);
+import {
+    ProductAttributes,
+    ProductImageState,
+    ListingConfig,
+    ProductContent,
+} from "./types";
 
-// Users
+/* =====================================================
+   ENUMS
+===================================================== */
+
+export const orderStatusEnum = pgEnum("order_status", [
+    "PENDING",
+    "PAID",
+    "PROCESSING",
+    "SHIPPED",
+    "DELIVERED",
+    "CANCELLED",
+]);
+
+/* =====================================================
+   USERS
+===================================================== */
+
 export const users = pgTable("users", {
     id: text("id").primaryKey(), // Clerk ID
     name: text("name"),
@@ -14,77 +43,159 @@ export const users = pgTable("users", {
     createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Categories
+/* =====================================================
+   CATEGORIES
+===================================================== */
+
 export const categories = pgTable("categories", {
     id: serial("id").primaryKey(),
     name: text("name").notNull(),
     slug: text("slug").unique().notNull(),
+    description: text("description"),
+    image: text("image"),
+    createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Products
+/* =====================================================
+   PRODUCTS
+===================================================== */
+
 export const products = pgTable("products", {
     id: serial("id").primaryKey(),
+
     name: text("name").notNull(),
+    slug: text("slug").unique(),
     tagline: text("tagline"),
     shortDescription: text("short_description"),
+    // Rich content & configs
+    content: json("content").$type<ProductContent>(),
+    attributes: json("attributes").$type<ProductAttributes>(),
+    images: json("images").$type<ProductImageState>(),
+    listingConfig: json("listing_config").$type<ListingConfig>(),
+
+    // Legacy / fallback description
     description: text("description"),
-    price: decimal("price").notNull(),
-    originalPrice: decimal("original_price"),
-    packSize: json("pack_size").$type<string[]>(),
-    flavors: json("flavors").$type<string[]>(),
-    benefits: json("benefits").$type<string[]>(),
-    images: json("images").$type<string[]>(),
+
     isBestSeller: boolean("is_best_seller").default(false),
+
     categoryId: integer("category_id").references(() => categories.id),
+
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Orders
+/* =====================================================
+   VARIANTS
+===================================================== */
+
+export const variants = pgTable("variants", {
+    id: serial("id").primaryKey(),
+
+    productId: integer("product_id")
+        .references(() => products.id)
+        .notNull(),
+
+    name: text("name").notNull(), // e.g. "Red / XL"
+    sku: text("sku").unique().notNull(),
+
+    price: decimal("price").notNull(),
+    compareAtPrice: decimal("compare_at_price"),
+
+    stock: integer("stock").default(0).notNull(),
+
+    attributes: json("attributes").$type<ProductAttributes>(),
+    images: json("images").$type<ProductImageState>(),
+
+    description: text("description"),
+
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+/* =====================================================
+   ORDERS
+===================================================== */
+
 export const orders = pgTable("orders", {
     id: serial("id").primaryKey(),
-    userId: text("user_id").notNull(), // Link to Clerk ID, but loosely coupled or we can enforce FK if we sync users
+
+    userId: text("user_id").notNull(), // Clerk ID (loosely coupled)
+
     status: orderStatusEnum("status").default("PENDING"),
-    amount: decimal("amount").notNull(),
+
+    subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+    tax: decimal("tax", { precision: 10, scale: 2 }).default("0"),
+    shipping: decimal("shipping", { precision: 10, scale: 2 }).default("0"),
+    total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+
+    currency: text("currency").default("INR"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Order Items
+/* =====================================================
+   ORDER ITEMS
+===================================================== */
+
 export const orderItems = pgTable("order_items", {
     id: serial("id").primaryKey(),
+
     orderId: integer("order_id").references(() => orders.id),
     productId: integer("product_id").references(() => products.id),
+    variantId: integer("variant_id").references(() => variants.id),
+
     quantity: integer("quantity").notNull(),
-    price: decimal("price").notNull(), // Snapshot price at time of order
+    price: decimal("price").notNull(), // Snapshot price
 });
 
-// Order Events (Tracking)
+/* =====================================================
+   ORDER EVENTS (TRACKING)
+===================================================== */
+
 export const orderEvents = pgTable("order_events", {
     id: serial("id").primaryKey(),
+
     orderId: integer("order_id").references(() => orders.id),
     status: text("status").notNull(), // "Out for delivery", etc.
-    timestamp: timestamp("timestamp").defaultNow(),
+
+    createdAt: timestamp("created_at").defaultNow()
 });
 
-// Reviews
+/* =====================================================
+   REVIEWS
+===================================================== */
+
 export const reviews = pgTable("reviews", {
     id: serial("id").primaryKey(),
+
     productId: integer("product_id").references(() => products.id),
     userId: text("user_id").notNull(),
+
     rating: integer("rating").notNull(),
     comment: text("comment"),
+
     isVerifiedPurchase: boolean("is_verified_purchase").default(false),
     createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Relations
+/* =====================================================
+   RELATIONS
+===================================================== */
+
 export const productsRelations = relations(products, ({ one, many }) => ({
     category: one(categories, {
         fields: [products.categoryId],
         references: [categories.id],
     }),
+    variants: many(variants),
     reviews: many(reviews),
+}));
+
+export const variantsRelations = relations(variants, ({ one }) => ({
+    product: one(products, {
+        fields: [variants.productId],
+        references: [products.id],
+    }),
 }));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({

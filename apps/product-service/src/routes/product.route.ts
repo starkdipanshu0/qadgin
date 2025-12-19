@@ -12,8 +12,11 @@ const app = new Hono();
 
 app.post("/", shouldBeAdmin, createProduct);
 app.put("/:id", shouldBeAdmin, updateProduct);
+app.patch("/:id/status", shouldBeAdmin, toggleProductStatus);
 app.delete("/:id", shouldBeAdmin, deleteProduct);
+// Storefront
 app.get("/", getProducts);
-app.get("/:id", getProduct);
+app.get("/slug/:slug", getProductBySlug);
+app.get("/:id", getProductById);
 
 export default app;

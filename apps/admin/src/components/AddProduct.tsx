@@ -1,5 +1,7 @@
 "use client";
 
+import { AttributeEditor } from "./AttributeEditor";
+import { VariantsEditor } from "./VariantsEditor";
 import {
   SheetContent,
   SheetDescription,
@@ -37,61 +39,38 @@ import { useAuth } from "@clerk/nextjs";
 
 
 
-const ProductFormSchema = z
-  .object({
-    name: z
-      .string({ message: "Product name is required!" })
-      .min(1, { message: "Product name is required!" }),
-    shortDescription: z
-      .string({ message: "Short description is required!" })
-      .min(1, { message: "Short description is required!" })
-      .max(60),
-    description: z
-      .string({ message: "Description is required!" })
-      .min(1, { message: "Description is required!" }),
-    price: z
-      .number({ message: "Price is required!" })
-      .min(1, { message: "Price is required!" }),
-    tagline: z
-      .string({ message: "Tagline is required!" })
-      .min(1, { message: "Tagline is required!" }),
-    originalPrice: z
-      .number({ message: "Original price is required!" })
-      .min(1, { message: "Original price is required!" }),
-    categorySlug: z
-      .string({ message: "Category is required!" })
-      .min(1, { message: "Category is required!" }),
-    images: z.record(z.string(), z.string(), {
-      message: "Image for each flavor is required!",
-    }),
-    flavors: z.array(z.string()).min(1, { message: "Flavor is required!" }),
-    packSize: z.array(z.string()).min(1, { message: "Pack Size is required!" }),
-    benefits: z
-      .string({ message: "Benefits are required!" })
-      .min(1, { message: "Benefits are required!" }),
-  })
-  .refine(
-    (data) => {
-      const missingImages = data.flavors.filter(
-        (flavor: string) => !data.images?.[flavor]
-      );
-      return missingImages.length === 0;
-    },
-    {
-      message: "Image is required for each selected flavor!",
-      path: ["images"],
-    }
-  );
+const ProductFormSchema = z.object({
+  name: z.string({ message: "Product name is required!" }).min(1, { message: "Product name is required!" }),
+  tagline: z.string({ message: "Tagline is required!" }).min(1, { message: "Tagline is required!" }),
+  shortDescription: z.string({ message: "Short description is required!" }).min(1).max(160),
+  description: z.string({ message: "Description is required!" }).min(1),
+  // Price/Original removed from main
+  categoryId: z.string({ message: "Category is required!" }).min(1),
 
-// const categories = [
-//   "T-shirts",
-//   "Shoes",
-//   "Accessories",
-//   "Bags",
-//   "Dresses",
-//   "Jackets",
-//   "Gloves",
-// ] as const;
+  // New Generic Attributes
+  attributes: z.record(z.string(), z.array(z.string())).optional(),
+
+  // New Image Structure
+  images: z.object({
+    main: z.string().min(1, { message: "Main image is required!" }),
+    gallery: z.array(z.string()).optional(),
+  }),
+
+  // Variants (Mandatory now)
+  variants: z.array(z.object({
+    name: z.string().min(1, { message: "Name required" }),
+    sku: z.string().min(1, { message: "SKU required" }),
+    price: z.number().min(0),
+    originalPrice: z.number().optional(),
+    stock: z.number().default(0),
+    attributes: z.record(z.string(), z.any()).optional(),
+    images: z.object({
+      main: z.string().nullable().optional(),
+      gallery: z.array(z.string()).optional()
+    }).optional(),
+    description: z.string().optional()
+  })).min(1, { message: "At least one variant is required to set the price!" }),
+});
 
 const fetchCategories = async () => {
   const res = await fetch(
@@ -112,14 +91,15 @@ const AddProduct = () => {
       name: "",
       shortDescription: "",
       description: "",
-      price: 0,
-      originalPrice: 0,
+      // price removed
       tagline: "",
-      categorySlug: "",
-      packSize: [],
-      flavors: [],
-      images: {},
-      benefits: "",
+      categoryId: "", // default empty
+      attributes: {},
+      images: {
+        main: "",
+        gallery: [],
+      },
+      variants: [],
     },
   });
 
@@ -135,7 +115,7 @@ const AddProduct = () => {
       const token = await getToken();
       const payload = {
         ...data,
-        benefits: data.benefits.split(",").map((b) => b.trim()),
+        categoryId: Number(data.categoryId), // Convert to number for backend
       };
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_PRODUCT_SERVICE_URL}/products`,
@@ -235,54 +215,12 @@ const AddProduct = () => {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Price</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(Number(e.target.value))
-                          }
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Enter the price of the product.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="originalPrice"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Original Price</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(Number(e.target.value))
-                          }
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Enter the original price of the product.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* Price Fields Removed */}
                 {data && (
                   <FormField
                     control={form.control}
-                    name="categorySlug"
+                    control={form.control}
+                    name="categoryId"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Category</FormLabel>
@@ -293,7 +231,7 @@ const AddProduct = () => {
                             </SelectTrigger>
                             <SelectContent>
                               {data.map((cat: CategoryType) => (
-                                <SelectItem key={cat.id} value={cat.slug}>
+                                <SelectItem key={cat.id} value={String(cat.id)}>
                                   {cat.name}
                                 </SelectItem>
                               ))}
@@ -301,154 +239,79 @@ const AddProduct = () => {
                           </Select>
                         </FormControl>
                         <FormDescription>
-                          Enter the category of the product.
+                          Select the category.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 )}
-                <FormField
-                  control={form.control}
-                  name="packSize"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Pack Size</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="e.g. 1kg, 250g (comma separated)"
-                          onChange={(e) => {
-                            const values = e.target.value
-                              .split(",")
-                              .map((v) => v.trim())
-                              .filter((v) => v);
-                            field.onChange(values);
-                          }}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Enter available pack sizes (comma separated).
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="flavors"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Flavors</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="e.g. Chocolate, Vanilla (comma separated)"
-                          onChange={(e) => {
-                            const values = e.target.value
-                              .split(",")
-                              .map((v) => v.trim())
-                              .filter((v) => v);
-                            field.onChange(values);
-                          }}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Enter available flavors (comma separated).
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="images"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Images</FormLabel>
-                      <FormControl>
-                        <div className="">
-                          {form.watch("flavors")?.map((flavor) => (
-                            <div
-                              className="mb-4 flex items-center gap-4"
-                              key={flavor}
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium min-w-[80px]">
-                                  {flavor}:
-                                </span>
-                              </div>
-                              <Input
-                                type="file"
-                                accept="image/*"
-                                onChange={async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    try {
-                                      const formData = new FormData();
-                                      formData.append("file", file);
-                                      formData.append(
-                                        "upload_preset",
-                                        "ecommerce"
-                                      );
 
-                                      const res = await fetch(
-                                        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
-                                        {
-                                          method: "POST",
-                                          body: formData,
-                                        }
-                                      );
-                                      const data = await res.json();
+                {/* MAIN IMAGE UPLOAD */}
+                <FormField
+                  control={form.control}
+                  name="images.main"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Main Product Image</FormLabel>
+                      <FormControl>
+                        <div className="flex gap-4 items-center">
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
 
-                                      if (data.secure_url) {
-                                        const currentImages =
-                                          form.getValues("images") || {};
-                                        form.setValue("images", {
-                                          ...currentImages,
-                                          [flavor]: data.secure_url,
-                                        });
-                                      }
-                                    } catch (error) {
-                                      console.log(error);
-                                      toast.error("Upload failed!");
-                                    }
-                                  }
-                                }}
-                              />
-                              {field.value?.[flavor] ? (
-                                <span className="text-green-600 text-sm">
-                                  Image selected
-                                </span>
-                              ) : (
-                                <span className="text-red-600 text-sm">
-                                  Image required
-                                </span>
-                              )}
-                            </div>
-                          ))}
+                              // Helper to upload (Duplicated for now, ideally generic hook)
+                              try {
+                                const formData = new FormData();
+                                formData.append("file", file);
+                                formData.append("upload_preset", "ecommerce");
+                                const res = await fetch(
+                                  `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+                                  { method: "POST", body: formData }
+                                );
+                                const data = await res.json();
+                                if (data.secure_url) {
+                                  field.onChange(data.secure_url);
+                                  toast.success("Image uploaded!");
+                                }
+                              } catch (err) {
+                                toast.error("Upload failed");
+                              }
+                            }}
+                          />
+                          {field.value && (
+                            <img src={field.value} alt="Preview" className="w-16 h-16 object-cover rounded-md border" />
+                          )}
                         </div>
                       </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="benefits"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Benefits</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          {...field}
-                          placeholder="Benefit 1, Benefit 2, Benefit 3"
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Enter the benefits of the product (comma separated).
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                {/* DYNAMIC ATTRIBUTES EDITOR */}
+                <FormField
+                  control={form.control}
+                  name="attributes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <AttributeEditor
+                          value={field.value || {}}
+                          onChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* VARIANT EDITOR (Replaces old VariantImageEditor) */}
+                <VariantsEditor control={form.control} name="variants" />
+
                 <Button
                   type="submit"
                   disabled={mutation.isPending}

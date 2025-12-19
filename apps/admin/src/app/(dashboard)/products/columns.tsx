@@ -56,9 +56,7 @@ export const columns: ColumnDef<ProductType>[] = [
         <div className="w-9 h-9 relative">
           <Image
             src={
-              (product.images as Record<string, string>)?.[
-              product.flavors?.[0] || ""
-              ] || ""
+              product.images?.main || ""
             }
             alt={product.name}
             fill
@@ -71,6 +69,11 @@ export const columns: ColumnDef<ProductType>[] = [
   {
     accessorKey: "name",
     header: "Name",
+  },
+  {
+    accessorKey: "slug",
+    header: "Slug",
+    cell: ({ row }) => <span className="text-xs text-stone-500 font-mono">{row.original.slug || "-"}</span>,
   },
   {
     accessorKey: "price",
@@ -114,7 +117,7 @@ export const columns: ColumnDef<ProductType>[] = [
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
-              <Link href={`/products/${product.id}`}>View product</Link>
+              <Link href={`http://localhost:3002/products/${product.slug || product.id}`} target="_blank">View on Site</Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

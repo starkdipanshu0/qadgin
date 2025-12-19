@@ -4,7 +4,7 @@ import useCartStore from "@/stores/cartStore";
 import { ProductType } from "@repo/types";
 import { Minus, Plus, ShoppingBag, Zap } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "react-toastify";
 
 interface ProductInteractionProps {
@@ -27,12 +27,28 @@ const ProductInteraction = ({
 
   const { addToCart } = useCartStore();
 
-  // Handle URL updates for Flavor/Size to keep server sync
-  const handleOptionChange = (key: "size" | "flavor", value: string) => {
+  // Normalize attributes for easy rendering
+  const attributes = useMemo(() => {
+    return product.attributes || {};
+  }, [product.attributes]);
+
+  // Handle URL updates - We can generalize this, but for now map 'Flavor' -> 'flavor' param etc.
+  // Ideally, query params should match attribute keys: ?Color=Red&Size=L
+  const handleOptionChange = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set(key, value);
+    // Normalize key for URL if needed (e.g. Flavor -> flavor)
+    const paramKey = key.toLowerCase() === "flavor" ? "flavor" : key.toLowerCase() === "size" ? "size" : key;
+    params.set(paramKey, value);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
+
+  const currentSelection = (key: string) => {
+    // Map specific known keys to the props passed in (which come from URL params in page.tsx)
+    if (key === "Flavor") return initialSelectedFlavor;
+    if (key === "Size" || key === "Pack Size") return initialSelectedSize;
+    // Fallback to checking URL params directly for generic attributes
+    return searchParams.get(key) || "";
+  }
 
   const handleQuantityChange = (type: "increment" | "decrement") => {
     if (type === "increment") {
@@ -46,15 +62,15 @@ const ProductInteraction = ({
 
   const handleAddToCart = () => {
     setIsAdding(true);
-    // Simulate a small delay for better UX feel
     setTimeout(() => {
       addToCart({
         ...product,
         quantity,
-        selectedColor: initialSelectedFlavor, // Mapping Flavor -> Color for store compatibility
-        selectedSize: initialSelectedSize,
+        selectedColor: initialSelectedFlavor, // Legacy prop name in store
+        selectedSize: initialSelectedSize,    // Legacy prop name in store
         price: Number(product.price),
         originalPrice: Number(product.originalPrice || 0),
+        // Pass generic attributes if store supports them later
       });
       toast.success(
         <div>
@@ -74,68 +90,47 @@ const ProductInteraction = ({
       price: Number(product.price),
       originalPrice: Number(product.originalPrice || 0),
     });
-    router.push('/cart'); // Direct to cart/checkout
+    router.push('/cart');
   };
+
+  // Pre-defined sort order or just iteration
+  const attributeKeys = Object.keys(attributes);
 
   return (
     <div className="flex flex-col gap-8 mt-2 animate-fade-in-up">
 
-      {/* --- FLAVOR SELECTOR --- */}
-      {product.flavors && product.flavors.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">
-            Select Flavor
-          </span>
-          <div className="flex flex-wrap gap-3">
-            {product && product.flavors.length > 0 && product.flavors.map((flavor: any) => {
-              const isSelected = initialSelectedFlavor === flavor;
-              return (
-                <button
-                  key={flavor}
+      {/* --- DYNAMIC ATTRIBUTE SELECTORS --- */}
+      {attributeKeys.map((key) => {
+        const values = attributes[key];
+        if (!values || values.length === 0) return null;
 
-                  onClick={() => handleOptionChange("flavor", flavor)}
-                  className={`
-                        px-4 py-2 rounded-full text-sm font-medium border transition-all duration-200 capitalize
+        return (
+          <div key={key} className="flex flex-col gap-3">
+            <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">
+              {key}
+            </span>
+            <div className="flex flex-wrap gap-3">
+              {values.map((val) => {
+                const isSelected = currentSelection(key) === val;
+                return (
+                  <button
+                    key={val}
+                    onClick={() => handleOptionChange(key, val)}
+                    className={`
+                        px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200 min-w-[60px] cursor-pointer
                         ${isSelected
-                      ? "bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-200 ring-2 ring-emerald-100 ring-offset-1"
-                      : "bg-white border-stone-200 text-stone-600 hover:border-emerald-400 hover:text-emerald-700"}
+                        ? "bg-stone-800 border-stone-800 text-white shadow-md ring-2 ring-stone-200 ring-offset-1"
+                        : "bg-white border-stone-200 text-stone-600 hover:border-emerald-400 hover:text-emerald-700"}
                     `}
-                >
-                  {flavor}
-                </button>
-              );
-            })}
+                  >
+                    {val}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* --- PACK SIZE SELECTOR --- */}
-      {product.packSize && product.packSize.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">
-            Pack Size
-          </span>
-          <div className="flex flex-wrap gap-3">
-            {product.packSize.map((size: any) => {
-              const isSelected = initialSelectedSize === size;
-              return (
-                <button
-                  key={size}
-                  onClick={() => handleOptionChange("size", size)}
-                  className={`
-                        px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200 min-w-[80px]
-                        ${isSelected
-                      ? "bg-stone-800 border-stone-800 text-white shadow-md"
-                      : "bg-white border-stone-200 text-stone-600 hover:border-stone-400"}
-                    `}
-                >
-                  {size}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+        );
+      })}
 
       {/* --- QUANTITY & ACTIONS ROW --- */}
       <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-stone-100">

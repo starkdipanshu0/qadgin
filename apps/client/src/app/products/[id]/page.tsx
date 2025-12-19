@@ -7,7 +7,6 @@ import Image from "next/image";
 import Link from "next/link";
 
 // Mock fetcher - replace with actual API call
-// Mock fetcher - replace with actual API call
 const fetchProduct = async (id: string) => {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_PRODUCT_SERVICE_URL}/products/${id}`);
@@ -57,25 +56,81 @@ const ProductPage = async ({
     return <div className="text-center py-20 text-stone-500">Product not found.</div>;
   }
 
-  // 1. Determine Defaults based on new data structure (Flavors/PackSizes)
-  // Prioritize URL param -> then first available option -> then empty string safely
-  const selectedFlavor = flavor || product.flavors?.[0] || "";
-  const selectedSize = size || product.packSize?.[0] || "";
+  // 1. Determine Defaults based on new data structure (Attributes)
+  const getFirst = (keys: string[]) => {
+    if (!product.attributes) return "";
+    for (const key of keys) {
+      if (product.attributes[key]?.length > 0) return product.attributes[key][0];
+    }
+    return "";
+  };
 
-  // 2. Determine Image based on selected flavor
-  // Determine Image URL (Single String) based on selected flavor
-  const currentImage = (
-    Array.isArray(product.images[selectedFlavor])
-      ? product.images[selectedFlavor][0]
-      : (product.images.main as string)
-  ) || "";
-  console.log("current image:", currentImage, "image tyupe::", typeof currentImage);
+  // Logic to handle Virtual Product Pre-selection
+  let virtualFlavor = "";
+  let virtualSize = "";
 
+  if (product.isVirtual && product.variantId && product.variants) {
+    const vId = product.variantId;
+    const v = product.variants.find((item) => item.id === vId);
+    if (v && v.attributes) {
+      const attrs = v.attributes as Record<string, string>;
+      virtualFlavor = attrs["Flavor"] || attrs["Color"] || attrs["Variant"] || "";
+      virtualSize = attrs["Size"] || attrs["Pack Size"] || attrs["Weight"] || "";
+    }
+  }
 
-  // 3. Calculate Discount
-  const hasDiscount = product.originalPrice && product.originalPrice > product.price;
+  const defaultFlavor = getFirst(["Flavor", "Color", "Variant"]);
+  const defaultSize = getFirst(["Size", "Pack Size", "Weight"]);
+
+  const selectedFlavor = flavor || virtualFlavor || defaultFlavor || "";
+  const selectedSize = size || virtualSize || defaultSize || "";
+
+  // 2. Find Active Variant
+  // We check for variants that match the selected attributes
+  const activeVariant = product.variants?.find((v) => {
+    const vAttrs = v.attributes as Record<string, any>;
+    if (!vAttrs) return false;
+
+    // Check if variant has the selected attribute values
+    // We treat variant attributes as single string or array
+    const hasValue = (val: string) => {
+      if (!val) return true; // checking empty is partial match? No, if selected is empty, we ignore
+      return Object.values(vAttrs).some(vVal =>
+        Array.isArray(vVal) ? vVal.includes(val) : vVal === val
+      );
+    };
+
+    // Strict match if both selected?
+    // For now: try to match flavor AND size if they are selected
+    if (selectedFlavor && selectedSize) return hasValue(selectedFlavor) && hasValue(selectedSize);
+    if (selectedFlavor) return hasValue(selectedFlavor);
+    if (selectedSize) return hasValue(selectedSize);
+    return false;
+  });
+
+  // 3. Determine Image based on variant or fallback to main
+  let currentImage = "";
+  if (activeVariant?.images?.main) {
+    currentImage = activeVariant.images.main;
+  } else if (product.images?.main) {
+    currentImage = product.images.main;
+  }
+
+  console.log("current image:", currentImage);
+
+  // 4. Resolve Price/Name Overrides based on Active Variant
+  const effectiveProduct = {
+    ...product,
+    name: activeVariant?.name || product.name,
+    price: activeVariant?.price ? Number(activeVariant.price) : product.price,
+    originalPrice: activeVariant?.originalPrice ? Number(activeVariant.originalPrice) : product.originalPrice,
+    // Note: We don't override the image here because logic above (currentImage) handles it
+  };
+
+  // 4. Calculate Discount
+  const hasDiscount = effectiveProduct.originalPrice && effectiveProduct.originalPrice > effectiveProduct.price;
   const discountPercentage = hasDiscount
-    ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100)
+    ? Math.round(((effectiveProduct.originalPrice! - effectiveProduct.price) / effectiveProduct.originalPrice!) * 100)
     : 0;
 
   return (
@@ -88,7 +143,7 @@ const ProductPage = async ({
           <ChevronRight className="w-4 h-4" />
           <Link href="/shop" className="hover:text-emerald-700 transition-colors">Shop</Link>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-stone-800 font-medium truncate max-w-[200px]">{product.name}</span>
+          <span className="text-stone-800 font-medium truncate max-w-[200px]">{effectiveProduct.name}</span>
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
@@ -109,13 +164,18 @@ const ProductPage = async ({
               )}
             </div>
 
-            <Image
-              src={currentImage}
-              alt={product.name}
-              fill
-              className="object-contain p-8 animate-fade-in"
-              priority
-            />
+            {currentImage ? (
+              <Image
+                src={currentImage}
+                alt={effectiveProduct.name}
+                fill
+                className="object-contain p-8 animate-fade-in"
+                priority
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-stone-300">No Image</div>
+            )}
+
           </div>
 
           {/* --- RIGHT COLUMN: DETAILS & BUY BOX --- */}
@@ -129,7 +189,7 @@ const ProductPage = async ({
                 </p>
               )}
               <h1 className="text-3xl md:text-4xl font-bold text-stone-900 tracking-tight mb-4">
-                {product.name}
+                {effectiveProduct.name}
               </h1>
 
               {/* Rating Mockup */}
@@ -141,11 +201,11 @@ const ProductPage = async ({
               {/* Price Block */}
               <div className="flex items-end gap-3 mb-6">
                 <span className="text-3xl font-bold text-emerald-800">
-                  ₹{product.price.toFixed(2)}
+                  ₹{effectiveProduct.price.toFixed(2)}
                 </span>
                 {hasDiscount && (
                   <span className="text-lg text-stone-400 line-through mb-1">
-                    ₹{product.originalPrice!.toFixed(2)}
+                    ₹{effectiveProduct.originalPrice!.toFixed(2)}
                   </span>
                 )}
               </div>
@@ -162,7 +222,7 @@ const ProductPage = async ({
             {/* INTERACTIVE BUY BOX AREA */}
             {/* We pass the *initial* selected values from URL params to the client component */}
             <ProductInteraction
-              product={product}
+              product={effectiveProduct}
               initialSelectedSize={selectedSize}
               initialSelectedFlavor={selectedFlavor}
             />
@@ -204,7 +264,8 @@ const ProductPage = async ({
                   </span>
                 </summary>
                 <ul className="mt-4 space-y-2 text-stone-600">
-                  {product.benefits?.map(benefit => (
+                  {/* Try to find a 'Benefits' or 'Features' attribute */}
+                  {(product.attributes?.["Benefits"] || product.attributes?.["Features"] || []).map(benefit => (
                     <li key={benefit} className="flex items-start gap-2">
                       <Check className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
                       <span>{benefit}</span>

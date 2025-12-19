@@ -89,9 +89,15 @@ const CartPage = () => {
                                                 <Image
                                                     src={((): string => {
                                                         const imgs = item.images as any;
+                                                        // 1. Try new variant structure
+                                                        if (imgs?.variants?.[item.selectedColor]?.main) {
+                                                            return imgs.variants[item.selectedColor].main;
+                                                        }
+                                                        // 2. Try legacy flat structure
                                                         const flavorImg = imgs?.[item.selectedColor];
                                                         if (Array.isArray(flavorImg) && flavorImg[0]) return flavorImg[0];
                                                         if (typeof flavorImg === "string" && flavorImg) return flavorImg;
+                                                        // 3. Fallback to main
                                                         return imgs?.main || "";
                                                     })()}
                                                     alt={item.name}
@@ -109,7 +115,7 @@ const CartPage = () => {
                                                             <X className="w-5 h-5" />
                                                         </button>
                                                     </div>
-                                                    <p className="text-stone-500 text-sm mt-1 capitalize">{item.flavors ? item.selectedColor : item.selectedSize}</p>
+                                                    <p className="text-stone-500 text-sm mt-1 capitalize">{item.selectedColor || item.selectedSize}</p>
                                                 </div>
 
                                                 <div className="flex justify-between items-end">

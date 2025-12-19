@@ -1,69 +1,137 @@
 import { Context } from "hono";
-import { db, products, categories } from "@repo/db";
+import { db, products, categories, variants } from "@repo/db";
 import { StripeProductType } from "@repo/types";
 import { eq, like, and, asc, desc, sql } from "drizzle-orm";
+
+
 
 export const createProduct = async (c: Context) => {
   const data = await c.req.json();
 
-  const { flavors, images, packSize, benefits, categoryId } = data; // Assuming categoryId is passed, or we need to look it up
+  // Destructure new fields
+  const { attributes, images, listingConfig, content, categoryId, variants: variantsData } = data;
 
-  if (!flavors || !Array.isArray(flavors) || flavors.length === 0) {
-    return c.json({ message: "Flavors array is required!" }, 400);
-  }
-
-  if (!images || typeof images !== "object" || Array.isArray(images)) {
-    return c.json({ message: "Images object is required!" }, 400);
-  }
-
-  const imagesObj = images as Record<string, any>;
-
-  if (!imagesObj.main) {
+  // Basic validation
+  if (!images || !images.main) {
     return c.json({ message: "Main image is required!" }, 400);
   }
 
-  const missingFlavors = flavors.filter((flavor: string) => !(flavor in imagesObj));
+  // Generate Slug
+  const slug = data.name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 
-  if (missingFlavors.length > 0) {
-    return c.json({ message: "Missing images for flavors!", missingFlavors }, 400);
-  }
-
-  // Ensure arrays are cast correctly for Drizzle json/array types
   const productData = {
-    ...data,
-    packSize: packSize as string[],
-    flavors: flavors as string[],
-    benefits: benefits as string[],
-    images: images as string[], // Drizzle defined as string[] but logic used object? Schema says string[], logic used object. Schema might be wrong or logic needs update.
-    // Schema: images: json("images").$type<string[]>(), 
-    // Logic: images is Record<string, any>
-    // FIX: Schema defined as json, so we can store object. But strict typing says string[].
-    // Let's cast to any to bypass strict check for now or update schema later if needed.
-    // For now assuming input matches what DB expects or just passing as json.
+    name: data.name,
+    slug,
+    tagline: data.tagline,
+    shortDescription: data.shortDescription,
+    categoryId,
+    attributes,
+    images,
+    listingConfig,
+    content,
+    isBestSeller: data.isBestSeller,
   };
 
+  // Transaction-like approach (Drizzle doesn't enforce strict transactions across all drivers, but sequential is fine here)
   const [product] = await db.insert(products).values(productData).returning();
 
-  /*
-  const stripeProduct: StripeProductType = {
-    id: product.id.toString(),
-    name: product.name,
-    price: Number(product.price),
-  };
-  producer.send("product.created", { value: stripeProduct });
-  */
-  return c.json(product, 201);
+  if (!product) {
+    return c.json({ message: "Failed to create product" }, 500);
+  }
+
+  if (variantsData && Array.isArray(variantsData) && variantsData.length > 0) {
+    const variantsToInsert = variantsData.map((v: any) => ({
+      productId: product.id,
+      name: v.name,
+      sku: v.sku,
+      price: String(v.price), // Price is now mandatory on variant
+      originalPrice: v.originalPrice ? String(v.originalPrice) : null,
+      stock: v.stock || 0,
+      attributes: v.attributes,
+      images: v.images,
+      description: v.description
+    }));
+
+    await db.insert(variants).values(variantsToInsert);
+  }
+
+  // Refetch with variants to return complete object
+  const fullProduct = await db.query.products.findFirst({
+    where: eq(products.id, product.id),
+    with: { variants: true }
+  });
+
+  return c.json(fullProduct, 201);
 };
 
 export const updateProduct = async (c: Context) => {
   const id = Number(c.req.param("id"));
   const data = await c.req.json();
 
+  // Separate variants from product data
+  const { variants: variantsData, ...productData } = data;
+
   const [updatedProduct] = await db
     .update(products)
-    .set(data)
+    .set(productData)
     .where(eq(products.id, id))
     .returning();
+
+  if (!updatedProduct) {
+    return c.json({ message: "Product not found or update failed" }, 404);
+  }
+
+  // Handle Variants Sync
+  if (variantsData && Array.isArray(variantsData)) {
+    // 1. Fetch existing variants to know what to delete
+    const existingVariants = await db.select().from(variants).where(eq(variants.productId, id));
+    const existingIds = existingVariants.map(v => v.id);
+
+    // 2. Identify variants to update vs insert
+    const incomingIds = variantsData
+      .filter((v: any) => v.id)
+      .map((v: any) => v.id);
+
+    const matchId = (vId: number) => incomingIds.includes(vId);
+
+    // 3. Delete variants not in usage
+    const toDelete = existingIds.filter(eid => !matchId(eid));
+    if (toDelete.length > 0) {
+      for (const delId of toDelete) {
+        await db.delete(variants).where(eq(variants.id, delId));
+      }
+    }
+
+    // 4. Upsert (Update or Insert)
+    for (const v of variantsData) {
+      const variantPayload = {
+        productId: id, // Ensure linked to parent
+        name: v.name,
+        sku: v.sku,
+        price: String(v.price), // Mandatory
+        originalPrice: v.originalPrice ? String(v.originalPrice) : null,
+        stock: v.stock || 0,
+        attributes: v.attributes,
+        images: v.images,
+        description: v.description
+      };
+
+      if (v.id) {
+        // Update
+        await db.update(variants)
+          .set(variantPayload)
+          .where(eq(variants.id, v.id));
+      } else {
+        // Insert
+        await db.insert(variants).values(variantPayload);
+      }
+    }
+  }
 
   return c.json(updatedProduct);
 };
@@ -71,10 +139,18 @@ export const updateProduct = async (c: Context) => {
 export const deleteProduct = async (c: Context) => {
   const id = Number(c.req.param("id"));
 
+  // Manual Cascade Delete: Variants
+  await db.delete(variants).where(eq(variants.productId, id));
+
+  // Delete Product
   const [deletedProduct] = await db
     .delete(products)
     .where(eq(products.id, id))
     .returning();
+
+  if (!deletedProduct) {
+    return c.json({ message: "Product not found" }, 404);
+  }
 
   /*
   producer.send("product.deleted", { value: Number(id) });
@@ -84,69 +160,223 @@ export const deleteProduct = async (c: Context) => {
 };
 
 export const getProducts = async (c: Context) => {
-  const { sort, category, search, limit } = c.req.query();
+  try {
+    const { sort, category, search, limit } = c.req.query();
+    console.log(`PRODUCT-SERVICE: getProducts called with params:`, { sort, category, search, limit });
 
-  const query = db
-    .select({
-      id: products.id,
-      name: products.name,
-      price: products.price,
-      images: products.images,
-      categorySlug: categories.slug,
-      createdAt: products.createdAt,
-    })
-    .from(products)
-    .leftJoin(categories, eq(products.categoryId, categories.id));
+    // Use db.query to easily fetch relations (variants)
+    // This replaces the raw select + leftJoin which makes fetching nested relations harder
+    const whereConditions = [];
 
-  const whereConditions = [];
+    if (category) {
+      console.log(`PRODUCT-SERVICE: Resolving category slug: ${category}`);
+      // We need to filter by category slug. db.query syntax for filtered relations is different, 
+      // or we filter in-memory if dataset small, BUT robust way is where:
+      // Drizzle's db.query doesn't easily support "where category slug = x" without joining.
+      // So we might need to find categoryId first or use constraints.
+      // For now, let's look up categoryId if category slug is provided.
+      const [cat] = await db.select().from(categories).where(eq(categories.slug, category));
+      if (cat) {
+        whereConditions.push(eq(products.categoryId, cat.id));
+      } else {
+        // Category not found, strictly return nothing? or ignore?
+        // Let's return empty if category specifically requested but missing
+        console.log(`PRODUCT-SERVICE: Category slug '${category}' not found.`);
+        return c.json([]);
+      }
+    }
 
-  if (category) {
-    whereConditions.push(eq(categories.slug, category));
+    if (search) {
+      whereConditions.push(sql`lower(${products.name}) like ${`%${search.toLowerCase()}%`}`);
+    }
+
+    const queryOptions: any = {
+      with: {
+        category: true,
+        variants: true,
+      },
+      where: whereConditions.length > 0 ? and(...whereConditions) : undefined,
+    };
+
+    if (sort === "asc") {
+      queryOptions.orderBy = asc(products.createdAt); // Fallback to created, can't sort by price easily in DB now without join
+    } else if (sort === "desc") {
+      queryOptions.orderBy = desc(products.createdAt);
+    } else if (sort === "oldest") {
+      queryOptions.orderBy = asc(products.createdAt);
+    } else {
+      queryOptions.orderBy = desc(products.createdAt);
+    }
+
+    if (limit) {
+      queryOptions.limit = Number(limit);
+    }
+
+    console.log("PRODUCT-SERVICE: Executing DB Query...");
+    const dbResults = await db.query.products.findMany(queryOptions);
+    console.log(`PRODUCT-SERVICE: DB Query returned ${dbResults.length} items`);
+
+    // "Explosion" Logic: Process Virtual Cards based on VARIANTS now
+    const finalResults: any[] = [];
+
+    for (const product of dbResults) {
+      try {
+        // Logic to find 'Display Price' (e.g. lowest variant price)
+        // Since 'price' is removed from product, we MUST compute it for the frontend card
+        let displayPrice = "0";
+        let displayOriginalPrice = null;
+
+        const pWithVariants = product as typeof product & { variants: any[] };
+        if (pWithVariants.variants && pWithVariants.variants.length > 0) {
+          // Find lowest price? or first?
+          const sorted = [...pWithVariants.variants].sort((a, b) => Number(a.price) - Number(b.price));
+          displayPrice = sorted[0].price;
+          displayOriginalPrice = sorted[0].originalPrice;
+        }
+
+        const productWithPrice = {
+          ...product,
+          price: displayPrice,
+          originalPrice: displayOriginalPrice
+        };
+
+        finalResults.push(productWithPrice);
+
+        // Check if we should show variants as cards
+        const config = product.listingConfig as any;
+        const showVariants = config?.showVariantsAsCards;
+
+        if (showVariants && pWithVariants.variants && pWithVariants.variants.length > 0) {
+          for (const variant of pWithVariants.variants) {
+            // Merge variant data onto product base
+            // Validate attributes object
+            const safeAttributes = (variant.attributes && typeof variant.attributes === 'object' && !Array.isArray(variant.attributes))
+              ? variant.attributes
+              : {};
+
+            finalResults.push({
+              ...product,
+              id: `${product.id}-v-${variant.id}`, // Virtual ID
+              name: variant.name || product.name,
+              images: variant.images,
+              price: variant.price,
+              originalPrice: variant.originalPrice,
+              isVirtual: true,
+              variantId: variant.id,
+              // TRANSFORM ATTRIBUTES
+              attributes: Object.entries(safeAttributes).reduce((acc: any, [k, v]) => {
+                acc[k] = Array.isArray(v) ? v : [v];
+                return acc;
+              }, {}),
+              variants: undefined
+            });
+          }
+        }
+      } catch (err) {
+        console.error(`PRODUCT-SERVICE: Error processing product ${product.id}`, err);
+        // Continue to next product, don't crash entire feed
+      }
+    }
+
+    console.log(`PRODUCT-SERVICE: Returning ${finalResults.length} total items (after explosion)`);
+    return c.json(finalResults);
+  } catch (error: any) {
+    console.error("PRODUCT-SERVICE: getProducts FAILED:", error);
+    return c.json({
+      message: "Internal Server Error",
+      details: error.message,
+      stack: error.stack
+    }, 500);
   }
-
-  if (search) {
-    whereConditions.push(sql`lower(${products.name}) like ${`%${search.toLowerCase()}%`}`);
-  }
-
-  if (whereConditions.length > 0) {
-    query.where(and(...whereConditions));
-  }
-
-  if (sort === "asc") {
-    query.orderBy(asc(products.price));
-  } else if (sort === "desc") {
-    query.orderBy(desc(products.price));
-  } else if (sort === "oldest") {
-    query.orderBy(asc(products.createdAt));
-  } else {
-    query.orderBy(desc(products.createdAt));
-  }
-
-  if (limit) {
-    query.limit(Number(limit));
-  }
-
-  const results = await query;
-  return c.json(results);
 };
 
 export const getProduct = async (c: Context) => {
-  const id = Number(c.req.param("id"));
-  console.log(`PRODUCT-SERVICE: Fetching product with ID: ${id}`);
+  const rawId = c.req.param("id");
+  let productId = 0;
+  let productSlug = "";
+  let variantId = 0;
 
-  const product = await db.query.products.findFirst({
-    where: eq(products.id, id),
-    with: {
-      category: true,
-      reviews: true
+  // Check for Virtual ID (e.g., "1-v-5") OR Slug (e.g. "ultimate-whey-protein")
+  const isVirtual = rawId && rawId.includes("-v-");
+  const isNumeric = !isNaN(Number(rawId)) && !isVirtual; // Pure number like "1"
+
+  if (isVirtual) {
+    const parts = rawId.split("-v-");
+    const pIdOrSlug = parts[0];
+    variantId = Number(parts[1]);
+
+    // Check if first part is ID or Slug
+    if (!isNaN(Number(pIdOrSlug))) {
+      productId = Number(pIdOrSlug);
+    } else {
+      // It's a slug based virtual ID? e.g. "my-product-v-5"
+      productSlug = pIdOrSlug || "";
     }
-  });
-
-  if (!product) {
-    console.log(`PRODUCT-SERVICE: Product ${id} not found`);
+  } else if (isNumeric) {
+    productId = Number(rawId);
   } else {
-    console.log(`PRODUCT-SERVICE: Found product ${id}, Price: ${product.price}`);
+    // Pure Slug
+    productSlug = rawId || "";
   }
 
-  return c.json(product);
+  console.log(`PRODUCT-SERVICE: Fetching product. ID: ${productId}, Slug: ${productSlug}, VariantId: ${variantId}`);
+
+  let product;
+
+  if (productId) {
+    product = await db.query.products.findFirst({
+      where: eq(products.id, productId),
+      with: { category: true, reviews: true, variants: true }
+    });
+  } else if (productSlug) {
+    product = await db.query.products.findFirst({
+      where: eq(products.slug, productSlug),
+      with: { category: true, reviews: true, variants: true }
+    });
+  }
+
+  if (!product) {
+    console.log(`PRODUCT-SERVICE: Product ${productId} not found`);
+    return c.json(null, 404);
+  }
+
+  // Calculate Display Price from Variants
+  let displayPrice = "0";
+  let displayOriginalPrice = null;
+  const pWithVariants = product as typeof product & { variants: any[] };
+
+  if (pWithVariants.variants && pWithVariants.variants.length > 0) {
+    const sorted = [...pWithVariants.variants].sort((a, b) => Number(a.price) - Number(b.price));
+    displayPrice = sorted[0].price;
+    displayOriginalPrice = sorted[0].originalPrice;
+  }
+
+  // Hydration Logic for Virtual ID
+  if (variantId && product.variants && product.variants.length > 0) {
+    const targetVariant = product.variants.find((v: any) => v.id === variantId);
+
+    if (targetVariant) {
+      console.log(`PRODUCT-SERVICE: Hydrating with Variant ${targetVariant.id}: ${targetVariant.name}`);
+      return c.json({
+        ...product,
+        id: rawId, // Return the virtual ID to keep URL consistent
+        name: targetVariant.name,
+        price: targetVariant.price,
+        originalPrice: targetVariant.originalPrice, // Use variant price
+        images: targetVariant.images || product.images,
+        description: targetVariant.description || product.description,
+        stock: targetVariant.stock,
+        sku: targetVariant.sku,
+        variantId: targetVariant.id,
+        isVirtual: true
+      });
+    }
+  }
+
+  console.log(`PRODUCT-SERVICE: Found product ${productId}, Computed Price: ${displayPrice}`);
+  return c.json({
+    ...product,
+    price: displayPrice,
+    originalPrice: displayOriginalPrice
+  });
 };

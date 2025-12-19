@@ -132,7 +132,16 @@ const CardList = async ({ title }: { title: string }) => {
   if (title === "Popular Products") {
     products = await fetch(
       `${process.env.NEXT_PUBLIC_PRODUCT_SERVICE_URL}/products?limit=5&popular=true`
-    ).then((res) => res.json());
+    ).then(async (res) => {
+      if (!res.ok) {
+        console.error("Popular products fetch failed:", res.status, await res.text());
+        return [];
+      }
+      return res.json();
+    }).catch(err => {
+      console.error("Popular products fetch error:", err);
+      return [];
+    });
   } else {
     orders = await fetch(
       `${process.env.NEXT_PUBLIC_ORDER_SERVICE_URL}/orders?limit=5`,
@@ -141,7 +150,16 @@ const CardList = async ({ title }: { title: string }) => {
           Authorization: `Bearer ${token}`,
         },
       }
-    ).then((res) => res.json());
+    ).then(async (res) => {
+      if (!res.ok) {
+        console.error("Latest orders fetch failed:", res.status, await res.text());
+        return [];
+      }
+      return res.json();
+    }).catch(err => {
+      console.error("Latest orders fetch error:", err);
+      return [];
+    });
   }
 
   return (
@@ -157,8 +175,7 @@ const CardList = async ({ title }: { title: string }) => {
               <div className="w-12 h-12 rounded-sm relative overflow-hidden">
                 <Image
                   src={
-                    Object.values(item.images as Record<string, string>)[0] ||
-                    ""
+                    item.images?.main || ""
                   }
                   alt={item.name}
                   fill

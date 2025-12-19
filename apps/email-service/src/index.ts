@@ -5,3 +5,4 @@ const start = async () => {
 };
 
 start();
+// "dev": "tsx --env-file=.env --watch src/index.ts"
