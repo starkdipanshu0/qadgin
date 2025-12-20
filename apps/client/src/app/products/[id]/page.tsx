@@ -57,10 +57,12 @@ const ProductPage = async ({
   }
 
   // 1. Determine Defaults based on new data structure (Attributes)
+  // 1. Determine Defaults based on new data structure (Attributes)
   const getFirst = (keys: string[]) => {
     if (!product.attributes) return "";
     for (const key of keys) {
-      if (product.attributes[key]?.length > 0) return product.attributes[key][0];
+      const vals = product.attributes[key];
+      if (vals && vals.length > 0) return vals[0];
     }
     return "";
   };
@@ -73,9 +75,11 @@ const ProductPage = async ({
     const vId = product.variantId;
     const v = product.variants.find((item) => item.id === vId);
     if (v && v.attributes) {
-      const attrs = v.attributes as Record<string, string>;
-      virtualFlavor = attrs["Flavor"] || attrs["Color"] || attrs["Variant"] || "";
-      virtualSize = attrs["Size"] || attrs["Pack Size"] || attrs["Weight"] || "";
+      // Attributes are string[] in DB/Types, but usually length 1 for variants?
+      // accessing first element safely
+      const attrs = v.attributes;
+      virtualFlavor = attrs["Flavor"]?.[0] || attrs["Color"]?.[0] || attrs["Variant"]?.[0] || "";
+      virtualSize = attrs["Size"]?.[0] || attrs["Pack Size"]?.[0] || attrs["Weight"]?.[0] || "";
     }
   }
 
@@ -88,7 +92,7 @@ const ProductPage = async ({
   // 2. Find Active Variant
   // We check for variants that match the selected attributes
   const activeVariant = product.variants?.find((v) => {
-    const vAttrs = v.attributes as Record<string, any>;
+    const vAttrs = v.attributes;
     if (!vAttrs) return false;
 
     // Check if variant has the selected attribute values

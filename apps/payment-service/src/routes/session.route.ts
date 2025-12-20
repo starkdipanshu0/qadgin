@@ -63,14 +63,17 @@ sessionRoute.post("/verify", shouldBeUser, async (c) => {
   if (generated_signature === razorpay_signature) {
     // Payment is successful
 
-    // Fetch product details for Kafka event
+    // Fetch product details for Kafka event / Order Service
     const products = await Promise.all(
       cart.map(async (item: any) => {
         const price = await getProductPrice(item.id);
         return {
+          productId: item.id, // Ensure productId is passed
+          variantId: item.variantId, // Ensure variantId is passed
           name: item.name,
           quantity: item.quantity,
-          price: price
+          price: Number(price), // Use fetched price
+          image: item.images?.main || item.image // Pass image if available
         }
       })
     );
@@ -88,9 +91,13 @@ sessionRoute.post("/verify", shouldBeUser, async (c) => {
         },
         body: JSON.stringify({
           userId: userId,
-          email: "",
-          amount: totalAmount * 100,
-          status: "success",
+          email: "", // Order service will enrich if empty
+          subtotal: totalAmount,
+          tax: 0,
+          shipping: 0,
+          total: totalAmount,
+          currency: "INR",
+          status: "PAID", // We can mark it PAID since verification passed
           products: products,
         }),
       });

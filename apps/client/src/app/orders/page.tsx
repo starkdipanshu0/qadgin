@@ -40,7 +40,7 @@ const OrdersPage = async () => {
             </div>
             <div className="w-1/12">
               <span className="font-medium text-sm text-gray-500">Total</span>
-              <p>₹{(order.amount / 100).toFixed(2)}</p>
+              <p>₹{Number(order.total).toFixed(2)}</p>
             </div>
             <div className="w-1/12">
               <span className="font-medium text-sm text-gray-500">Status</span>

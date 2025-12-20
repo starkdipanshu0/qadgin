@@ -62,7 +62,7 @@ const ProductFormSchema = z.object({
     sku: z.string().min(1, { message: "SKU required" }),
     price: z.number().min(0),
     originalPrice: z.number().optional(),
-    stock: z.number().default(0),
+    stock: z.number().min(0),
     attributes: z.record(z.string(), z.any()).optional(),
     images: z.object({
       main: z.string().nullable().optional(),
@@ -219,7 +219,7 @@ const AddProduct = () => {
                 {data && (
                   <FormField
                     control={form.control}
-                    control={form.control}
+
                     name="categoryId"
                     render={({ field }) => (
                       <FormItem>

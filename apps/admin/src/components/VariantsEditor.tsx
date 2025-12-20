@@ -30,7 +30,7 @@ export const VariantsEditor = ({ control, name }: VariantsEditorProps) => {
             const data = await res.json();
             if (data.secure_url) {
                 // Merge existing data with new image
-                const current = fields[index];
+                const current = fields[index] as any;
                 update(index, { ...current, images: { ...current.images, main: data.secure_url } });
                 toast.success("Image uploaded!");
             }

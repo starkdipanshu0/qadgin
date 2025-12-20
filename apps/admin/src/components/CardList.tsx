@@ -201,7 +201,7 @@ const CardList = async ({ title }: { title: string }) => {
                 </CardTitle>
                 <Badge variant="secondary">{item.status}</Badge>
               </CardContent>
-              <CardFooter className="p-0">${item.amount / 100}</CardFooter>
+              <CardFooter className="p-0">${Number(item.total).toFixed(2)}</CardFooter>
             </Card>
           ))}
       </div>

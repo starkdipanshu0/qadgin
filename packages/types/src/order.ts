@@ -1,5 +1,6 @@
 export interface OrderProductType {
   productId: number;
+  variantId?: number;
   name: string;
   quantity: number;
   price: number;
@@ -10,7 +11,14 @@ export interface OrderType {
   id?: number;
   userId: string;
   email?: string;
-  amount: number;
+
+  // Financials matching DB schema
+  subtotal: number;
+  tax: number;
+  shipping: number;
+  total: number;
+  currency?: string;
+
   status: string;
   createdAt?: Date;
   products: OrderProductType[];
