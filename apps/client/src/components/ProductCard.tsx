@@ -8,38 +8,40 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "react-toastify";
 
-// Helper to safely get first attribute
-const getFirstAttr = (product: ProductType, keys: string[]) => {
-  if (!product.attributes) return "";
-  for (const key of keys) {
-    // Safe access with optional chaining
-    const attr = product.attributes?.[key];
-    if (attr && attr.length > 0) return attr[0];
-  }
-  return "";
-};
-
 const ProductCard = ({ product }: { product: ProductType }) => {
-  // 1. Keep track of the selection
-  // Try 'Flavor' then 'Color' then 'Variant'
-  const defaultFlavor = getFirstAttr(product, ["Flavor", "Color", "Variant"]);
-  const [selectedFlavor, setSelectedFlavor] = useState<string>(defaultFlavor || "");
+  // Helper: Get first available attribute value to default selection
+  const getPrimaryAttr = () => {
+    if (!product.attributes) return "";
+    const keys = Object.keys(product.attributes);
+    if (keys.length === 0) return "";
+    const firstKey = keys[0];
+    if (!firstKey) return "";
+    return product.attributes[firstKey]?.[0] || "";
+  };
+
+  // Helper: Get all attributes as string (e.g. "Red / XL")
+  const getSpecsString = () => {
+    if (!product.attributes) return "";
+    return Object.values(product.attributes)
+      .flat()
+      .slice(0, 2) // Limit to 2 for card
+      .join(" / ");
+  };
+
+  const [selectedAttr] = useState<string>(getPrimaryAttr());
 
   const { addToCart } = useCartStore();
 
   // 2. CALCULATE IMAGE (Derived State)
   const getDisplayImage = (): string => {
-    // Safety check
     if (!product.images) return "";
 
-    // New Logic: Check relational Variants for the image
-    if (product.variants && selectedFlavor) {
+    // Check variants matching the primary attribute
+    if (product.variants && selectedAttr) {
       const matchingVariant = product.variants.find((v) => {
         if (!v.attributes) return false;
-        // Check if any attribute value matches the selected string (e.g. "Red")
-        // Attributes are { Key: ["Value"] }
         return Object.values(v.attributes).some((values) =>
-          Array.isArray(values) && values.includes(selectedFlavor)
+          Array.isArray(values) && values.includes(selectedAttr)
         );
       });
 
@@ -47,51 +49,25 @@ const ProductCard = ({ product }: { product: ProductType }) => {
         return matchingVariant.images.main;
       }
     }
-
-    // Fallback to Main Product Link
     return product.images.main || "";
   };
 
   const displayImage = getDisplayImage();
 
-  // 3. CALCULATE URL (Standard vs Virtual)
-  // If virtual, we want to preserve the variant I D in the slug: /products/my-slug-v-123
+  // 3. CALCULATE URL
   const getProductUrl = () => {
     if (product.isVirtual && product.variantId) {
-      // Prefer slug if available, else ID
       const base = product.slug || product.id;
       return `/products/${base}-v-${product.variantId}`;
     }
-    // Standard Product
     return `/products/${product.slug || product.id}`;
   };
 
   const productUrl = getProductUrl();
+  const specs = getSpecsString();
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
-    const size = getFirstAttr(product, ["Size", "Weight", "Pack Size"]);
-
-    // Sanitize Payload: Don't store heavy 'variants' or 'content' in Cart
-    // Also ensure numeric prices
-    addToCart({
-      ...product,
-      variants: undefined, // Remove variants from cart item
-      content: null, // Keep cart lightweight
-      listingConfig: null,
-      quantity: 1,
-      selectedSize: size || "",
-      price: Number(product.price),
-      originalPrice: Number(product.originalPrice || 0),
-      isBestSeller: product.isBestSeller ?? false,
-      selectedColor: selectedFlavor || "",
-    });
-    toast.success("Added to cart");
-  };
-
-  const handleBuyNow = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const size = getFirstAttr(product, ["Size", "Weight", "Pack Size"]);
 
     addToCart({
       ...product,
@@ -99,11 +75,30 @@ const ProductCard = ({ product }: { product: ProductType }) => {
       content: null,
       listingConfig: null,
       quantity: 1,
-      selectedSize: size || "",
+      // Map dynamic specs to legacy cart fields
+      selectedSize: specs,
+      selectedColor: selectedAttr,
       price: Number(product.price),
       originalPrice: Number(product.originalPrice || 0),
       isBestSeller: product.isBestSeller ?? false,
-      selectedColor: selectedFlavor || "",
+    });
+    toast.success("Added to cart");
+  };
+
+  const handleBuyNow = (e: React.MouseEvent) => {
+    e.preventDefault();
+
+    addToCart({
+      ...product,
+      variants: undefined,
+      content: null,
+      listingConfig: null,
+      quantity: 1,
+      selectedSize: specs,
+      selectedColor: selectedAttr,
+      price: Number(product.price),
+      originalPrice: Number(product.originalPrice || 0),
+      isBestSeller: product.isBestSeller ?? false,
     });
     toast.success("Redirecting to checkout...");
   };
@@ -136,7 +131,7 @@ const ProductCard = ({ product }: { product: ProductType }) => {
           )}
         </div>
 
-        {/* RENDER IMAGE USING DERIVED CONSTANT */}
+        {/* RENDER IMAGE */}
         {displayImage ? (
           <Image
             src={displayImage}
@@ -154,24 +149,22 @@ const ProductCard = ({ product }: { product: ProductType }) => {
 
       {/* 2. MINIMAL INFO SECTION */}
       <div className="p-3 flex flex-col gap-1 flex-grow">
-        {/* Tagline */}
         <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider truncate">
           {product.tagline}
         </p>
 
-        {/* Name */}
         <Link href={productUrl}>
           <h3 className="text-sm font-semibold text-stone-800 leading-tight line-clamp-2 hover:text-emerald-700 transition-colors">
             {product.name}
           </h3>
         </Link>
 
-        {/* 3. FOOTER: Price & Dual Actions */}
+        {/* 3. FOOTER: Price & Specs */}
         <div className="mt-auto pt-4 flex items-end justify-between gap-2">
-          {/* Price Column */}
           <div className="flex flex-col leading-none mb-1">
-            <span className="text-xs text-stone-400 font-medium mb-0.5">
-              {getFirstAttr(product, ["Size", "Weight", "Pack Size"])}
+            {/* DYNAMIC SPECS (Red / XL) instead of just Size */}
+            <span className="text-xs text-stone-400 font-medium mb-0.5 truncate max-w-[100px]" title={specs}>
+              {specs}
             </span>
             <div className="flex items-center gap-1.5">
               <span className="text-lg font-bold text-stone-900">

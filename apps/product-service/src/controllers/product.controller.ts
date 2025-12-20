@@ -119,7 +119,10 @@ export const createProduct = async (c: Context) => {
       categoryId: data.categoryId,
       attributes: data.attributes,
       images: data.images,
-      listingConfig: data.listingConfig,
+      listingConfig: {
+        ...data.listingConfig,
+        price: data.price ? String(data.price) : data.listingConfig?.price
+      },
       content: data.content,
       isBestSeller: data.isBestSeller ?? false,
     })
@@ -181,7 +184,14 @@ export const updateProduct = async (c: Context) => {
   }
 
   // Separate variants from product data
-  const { variants: variantsData, ...productData } = data;
+  const { variants: variantsData, ...rest } = data;
+  const productData = {
+    ...rest,
+    listingConfig: {
+      ...rest.listingConfig,
+      price: rest.price ? String(rest.price) : rest.listingConfig?.price
+    }
+  };
 
   const [updatedProduct] = await db
     .update(products)
@@ -330,7 +340,7 @@ export const getProducts = async (c: Context) => {
       try {
         // Logic to find 'Display Price' (e.g. lowest variant price)
         // Since 'price' is removed from product, we MUST compute it for the frontend card
-        let displayPrice = "0";
+        let displayPrice = (product.listingConfig as any)?.price || "0";
         let displayOriginalPrice = null;
 
         const pWithVariants = product as typeof product & { variants: any[] };
@@ -448,7 +458,7 @@ export const getProduct = async (c: Context) => {
   }
 
   // Calculate Display Price from Variants
-  let displayPrice = "0";
+  let displayPrice = (product.listingConfig as any)?.price || "0";
   let displayOriginalPrice = null;
   const pWithVariants = product as typeof product & { variants: any[] };
 
@@ -523,7 +533,7 @@ export const getProductBySlug = async (c: Context) => {
   }
 
   // Calculate Display Price from Variants
-  let displayPrice = "0";
+  let displayPrice = (product.listingConfig as any)?.price || "0";
   let displayOriginalPrice = null;
   const pWithVariants = product as typeof product & { variants: any[] };
 
@@ -555,7 +565,7 @@ export const getProductById = async (c: Context) => {
   }
 
   // Calculate Display Price from Variants
-  let displayPrice = "0";
+  let displayPrice = (product.listingConfig as any)?.price || "0";
   let displayOriginalPrice = null;
   const pWithVariants = product as typeof product & { variants: any[] };
 

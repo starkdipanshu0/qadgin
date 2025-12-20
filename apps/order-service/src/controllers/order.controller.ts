@@ -163,22 +163,23 @@ export const createOrderInternal = async (c: Context) => {
             let sku = product.slug; // Fallback SKU
             let variantName = null;
 
-            // Variant logic
-            if (item.variantId) {
-                const variant = dbVariants.find((v) => v.id === item.variantId);
-                if (variant) {
-                    price = Number(variant.price);
-                    variantName = variant.name;
-                    sku = variant.sku;
-                } else {
-                    // STRICT VALIDATION: If variant ID is sent, it MUST exist.
-                    console.error(`Variant not found: ${item.variantId}`);
-                    return c.json({ success: false, message: `Variant ${item.variantId} not found` }, 400);
-                }
+            // Variant logic - MANDATORY
+            if (!item.variantId) {
+                return c.json({ success: false, message: `Product ${product.name} (ID: ${item.productId}) requires a variant to be selected.` }, 400);
+            }
+
+            const variant = dbVariants.find((v) => v.id === item.variantId);
+            if (variant) {
+                price = Number(variant.price);
+                variantName = variant.name;
+                sku = variant.sku;
+            } else {
+                // STRICT VALIDATION: If variant ID is sent, it MUST exist.
+                console.error(`Variant not found: ${item.variantId}`);
+                return c.json({ success: false, message: `Variant ${item.variantId} not found` }, 400);
             }
 
             // Trusting payload price is dangerous. Use DB price.
-
             const lineTotal = price * item.quantity;
             verifiedSubtotal += lineTotal;
 
