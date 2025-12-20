@@ -92,6 +92,7 @@ sessionRoute.post("/verify", shouldBeUser, async (c) => {
         body: JSON.stringify({
           userId: userId,
           email: "", // Order service will enrich if empty
+          paymentId: razorpay_payment_id, // Pass for idempotency
           subtotal: totalAmount,
           tax: 0,
           shipping: 0,
