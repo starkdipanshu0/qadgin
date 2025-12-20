@@ -5,6 +5,7 @@ import { clerkMiddleware, getAuth } from "@hono/clerk-auth";
 import { shouldBeAdmin, shouldBeUser } from "./middleware/authMiddleware.js";
 import productRouter from "./routes/product.route";
 import categoryRouter from "./routes/category.route";
+import reviewRouter from "./routes/review.route";
 
 const app = new Hono();
 
@@ -37,6 +38,7 @@ app.get("/test-admin", shouldBeAdmin, (c) => {
 
 app.route("/products", productRouter);
 app.route("/categories", categoryRouter);
+app.route("/reviews", reviewRouter);
 
 app.onError((err, c) => {
   console.log(err);

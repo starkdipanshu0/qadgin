@@ -1,69 +1,161 @@
 import { Context } from "hono";
 import { db, products, categories, variants } from "@repo/db";
-import { StripeProductType } from "@repo/types";
+
 import { eq, like, and, asc, desc, sql } from "drizzle-orm";
 
 
 
+// export const createProduct = async (c: Context) => {
+//   const data = await c.req.json();
+
+//   // Destructure new fields
+//   const { attributes, images, listingConfig, content, categoryId, variants: variantsData } = data;
+
+//   // Basic validation
+//   if (!images || !images.main) {
+//     return c.json({ message: "Main image is required!" }, 400);
+//   }
+
+//   // Generate Slug
+//   const slug = data.name
+//     .toLowerCase()
+//     .trim()
+//     .replace(/[^\w\s-]/g, '')
+//     .replace(/[\s_-]+/g, '-')
+//     .replace(/^-+|-+$/g, '');
+
+//   const productData = {
+//     name: data.name,
+//     slug,
+//     tagline: data.tagline,
+//     shortDescription: data.shortDescription,
+//     categoryId,
+//     attributes,
+//     images,
+//     listingConfig,
+//     content,
+//     isBestSeller: data.isBestSeller,
+//   };
+
+//   // Transaction-like approach (Drizzle doesn't enforce strict transactions across all drivers, but sequential is fine here)
+//   const [product] = await db.insert(products).values(productData).returning();
+
+//   if (!product) {
+//     return c.json({ message: "Failed to create product" }, 500);
+//   }
+
+//   if (variantsData && Array.isArray(variantsData) && variantsData.length > 0) {
+//     const variantsToInsert = variantsData.map((v: any) => ({
+//       productId: product.id,
+//       name: v.name,
+//       sku: v.sku,
+//       price: String(v.price), // Price is now mandatory on variant
+//       originalPrice: v.originalPrice ? String(v.originalPrice) : null,
+//       stock: v.stock || 0,
+//       attributes: v.attributes,
+//       images: v.images,
+//       description: v.description
+//     }));
+
+//     await db.insert(variants).values(variantsToInsert);
+//   }
+
+//   // Refetch with variants to return complete object
+//   const fullProduct = await db.query.products.findFirst({
+//     where: eq(products.id, product.id),
+//     with: { variants: true }
+//   });
+
+//   return c.json(fullProduct, 201);
+// };
+
 export const createProduct = async (c: Context) => {
   const data = await c.req.json();
 
-  // Destructure new fields
-  const { attributes, images, listingConfig, content, categoryId, variants: variantsData } = data;
-
-  // Basic validation
-  if (!images || !images.main) {
-    return c.json({ message: "Main image is required!" }, 400);
+  // -------- Validation --------
+  if (!data?.name) {
+    return c.json({ message: "Product name is required" }, 400);
   }
 
-  // Generate Slug
-  const slug = data.name
+  if (!data?.images?.main) {
+    return c.json({ message: "Main image is required" }, 400);
+  }
+
+  if (data.variants && !Array.isArray(data.variants)) {
+    return c.json({ message: "Variants must be an array" }, 400);
+  }
+
+  // -------- Slug Generation --------
+  let baseSlug = data.name
     .toLowerCase()
     .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/[\s_-]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
-  const productData = {
-    name: data.name,
-    slug,
-    tagline: data.tagline,
-    shortDescription: data.shortDescription,
-    categoryId,
-    attributes,
-    images,
-    listingConfig,
-    content,
-    isBestSeller: data.isBestSeller,
-  };
+  // Ensure slug uniqueness (important)
+  let slug = baseSlug;
+  let suffix = 1;
 
-  // Transaction-like approach (Drizzle doesn't enforce strict transactions across all drivers, but sequential is fine here)
-  const [product] = await db.insert(products).values(productData).returning();
-
-  if (!product) {
-    return c.json({ message: "Failed to create product" }, 500);
+  while (
+    await db.query.products.findFirst({
+      where: eq(products.slug, slug),
+    })
+  ) {
+    slug = `${baseSlug}-${suffix++}`;
   }
 
-  if (variantsData && Array.isArray(variantsData) && variantsData.length > 0) {
-    const variantsToInsert = variantsData.map((v: any) => ({
-      productId: product.id,
-      name: v.name,
-      sku: v.sku,
-      price: String(v.price), // Price is now mandatory on variant
-      originalPrice: v.originalPrice ? String(v.originalPrice) : null,
-      stock: v.stock || 0,
-      attributes: v.attributes,
-      images: v.images,
-      description: v.description
-    }));
+  // -------- Transaction (Simulated) --------
+  // Note: db.transaction is not supported in neon-http driver yet.
+  // We execute sequentially. If second part fails, we have an orphan product (can add cleanup later).
+
+  const [product] = await db
+    .insert(products)
+    .values({
+      name: data.name,
+      slug,
+      tagline: data.tagline,
+      shortDescription: data.shortDescription,
+      categoryId: data.categoryId,
+      attributes: data.attributes,
+      images: data.images,
+      listingConfig: data.listingConfig,
+      content: data.content,
+      isBestSeller: data.isBestSeller ?? false,
+    })
+    .returning();
+
+  if (!product) {
+    throw new Error("Product creation failed");
+  }
+
+  // -------- Variants --------
+  if (Array.isArray(data.variants) && data.variants.length > 0) {
+    const variantsToInsert = data.variants.map((v: any) => {
+      if (!v.sku || v.price == null) {
+        throw new Error("Each variant must have sku and price");
+      }
+
+      return {
+        productId: product.id,
+        name: v.name,
+        sku: v.sku,
+        price: String(v.price),
+        originalPrice: v.originalPrice ? String(v.originalPrice) : null,
+        stock: v.stock ?? 0,
+        attributes: v.attributes,
+        images: v.images,
+        description: v.description,
+      };
+    });
 
     await db.insert(variants).values(variantsToInsert);
   }
 
-  // Refetch with variants to return complete object
+  // -------- Fetch full product --------
   const fullProduct = await db.query.products.findFirst({
     where: eq(products.id, product.id),
-    with: { variants: true }
+    with: { variants: true },
   });
 
   return c.json(fullProduct, 201);
@@ -72,6 +164,21 @@ export const createProduct = async (c: Context) => {
 export const updateProduct = async (c: Context) => {
   const id = Number(c.req.param("id"));
   const data = await c.req.json();
+
+  // -------- Validation --------
+  if (data.variants && !Array.isArray(data.variants)) {
+    return c.json({ message: "Variants must be an array" }, 400);
+  }
+
+  // If changing slug, check uniqueness (simple check, for robust app use service layer)
+  if (data.slug) {
+    const existing = await db.query.products.findFirst({
+      where: eq(products.slug, data.slug)
+    });
+    if (existing && existing.id !== id) {
+      return c.json({ message: "Slug already in use" }, 409);
+    }
+  }
 
   // Separate variants from product data
   const { variants: variantsData, ...productData } = data;
@@ -374,6 +481,90 @@ export const getProduct = async (c: Context) => {
   }
 
   console.log(`PRODUCT-SERVICE: Found product ${productId}, Computed Price: ${displayPrice}`);
+  return c.json({
+    ...product,
+    price: displayPrice,
+    originalPrice: displayOriginalPrice
+  });
+};
+
+export const toggleProductStatus = async (c: Context) => {
+  const id = Number(c.req.param("id"));
+  const { status } = await c.req.json();
+
+  if (!["DRAFT", "PUBLISHED", "ARCHIVED"].includes(status)) {
+    return c.json({ message: "Invalid status" }, 400);
+  }
+
+  const [updatedProduct] = await db
+    .update(products)
+    .set({ status })
+    .where(eq(products.id, id))
+    .returning();
+
+  if (!updatedProduct) {
+    return c.json({ message: "Product not found" }, 404);
+  }
+
+  return c.json(updatedProduct);
+};
+
+export const getProductBySlug = async (c: Context) => {
+  const slug = c.req.param("slug");
+  console.log(`PRODUCT-SERVICE: Fetching product by slug: ${slug}`);
+
+  const product = await db.query.products.findFirst({
+    where: eq(products.slug, slug),
+    with: { category: true, reviews: true, variants: true }
+  });
+
+  if (!product) {
+    return c.json({ message: "Product not found" }, 404);
+  }
+
+  // Calculate Display Price from Variants
+  let displayPrice = "0";
+  let displayOriginalPrice = null;
+  const pWithVariants = product as typeof product & { variants: any[] };
+
+  if (pWithVariants.variants && pWithVariants.variants.length > 0) {
+    const sorted = [...pWithVariants.variants].sort((a, b) => Number(a.price) - Number(b.price));
+    displayPrice = sorted[0].price;
+    displayOriginalPrice = sorted[0].originalPrice;
+  }
+
+  return c.json({
+    ...product,
+    price: displayPrice,
+    originalPrice: displayOriginalPrice
+  });
+};
+
+export const getProductById = async (c: Context) => {
+  const id = Number(c.req.param("id"));
+  console.log(`PRODUCT-SERVICE: Fetching product by ID: ${id}`);
+
+  // Note: getProduct logic already existed but we split it here for clarity with route
+  const product = await db.query.products.findFirst({
+    where: eq(products.id, id),
+    with: { category: true, reviews: true, variants: true }
+  });
+
+  if (!product) {
+    return c.json({ message: "Product not found" }, 404);
+  }
+
+  // Calculate Display Price from Variants
+  let displayPrice = "0";
+  let displayOriginalPrice = null;
+  const pWithVariants = product as typeof product & { variants: any[] };
+
+  if (pWithVariants.variants && pWithVariants.variants.length > 0) {
+    const sorted = [...pWithVariants.variants].sort((a, b) => Number(a.price) - Number(b.price));
+    displayPrice = sorted[0].price;
+    displayOriginalPrice = sorted[0].originalPrice;
+  }
+
   return c.json({
     ...product,
     price: displayPrice,

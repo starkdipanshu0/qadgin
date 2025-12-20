@@ -3,25 +3,32 @@ import { eq } from "drizzle-orm";
 import { Context } from "hono";
 
 export const createCategory = async (c: Context) => {
-  const { name, slug, description, image } = (await c.req.json()) as {
-    name: string;
-    slug: string;
-    description?: string;
-    image?: string;
-  };
+  const { name, description, image } = await c.req.json();
+  let { slug } = await c.req.json();
 
   console.log("CATEGORY-SERVICE: Received payload:", { name, slug, description, image });
 
-  if (!name || !slug) {
-    console.error("CATEGORY-SERVICE: Missing Name or Slug");
-    return c.json({ message: "Name and slug are required" }, 400);
+  if (!name) {
+    return c.json({ message: "Name is required" }, 400);
+  }
+
+  // Auto-generate slug if missing
+  if (!slug) {
+    slug = name.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/[\s_-]+/g, "-").replace(/^-+|-+$/g, "");
+  }
+
+  // Ensure slug uniqueness
+  let finalSlug = slug;
+  let suffix = 1;
+  while (await db.query.categories.findFirst({ where: eq(categories.slug, finalSlug) })) {
+    finalSlug = `${slug}-${suffix++}`;
   }
 
   try {
     console.log("CATEGORY-SERVICE: Attempting DB Insert...");
     const [category] = await db.insert(categories).values({
       name,
-      slug,
+      slug: finalSlug,
       description,
       image,
     }).returning();
@@ -51,9 +58,16 @@ export const updateCategory = async (c: Context) => {
 
   const updateData: any = {};
   if (name !== undefined) updateData.name = name;
-  if (slug !== undefined) updateData.slug = slug;
-  if (description !== undefined) updateData.description = description;
-  if (image !== undefined) updateData.image = image;
+  // Check slug uniqueness if updating
+  if (slug) {
+    const existing = await db.query.categories.findFirst({
+      where: eq(categories.slug, slug)
+    });
+    if (existing && existing.id !== id) {
+      return c.json({ message: "Slug already in use" }, 409);
+    }
+    updateData.slug = slug;
+  }
 
   const [category] = await db
     .update(categories)
@@ -84,6 +98,17 @@ export const getCategories = async (c: Context) => {
 export const getCategoryById = async (c: Context) => {
   const id = Number(c.req.param("id"));
   const [category] = await db.select().from(categories).where(eq(categories.id, id));
+
+  if (!category) {
+    return c.json({ message: "Category not found" }, 404);
+  }
+
+  return c.json(category);
+};
+
+export const getCategoryBySlug = async (c: Context) => {
+  const slug = c.req.param("slug");
+  const [category] = await db.select().from(categories).where(eq(categories.slug, slug));
 
   if (!category) {
     return c.json({ message: "Category not found" }, 404);

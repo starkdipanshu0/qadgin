@@ -2,8 +2,10 @@ import { Hono } from "hono";
 import {
   createProduct,
   deleteProduct,
-  getProduct,
+  getProductById,
+  getProductBySlug,
   getProducts,
+  toggleProductStatus,
   updateProduct,
 } from "../controllers/product.controller";
 import { shouldBeAdmin } from "../middleware/authMiddleware";

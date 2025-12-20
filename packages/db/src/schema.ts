@@ -31,6 +31,8 @@ export const orderStatusEnum = pgEnum("order_status", [
     "CANCELLED",
 ]);
 
+export const productStatusEnum = pgEnum("product_status", ["DRAFT", "PUBLISHED", "ARCHIVED"]);
+
 /* =====================================================
    USERS
 ===================================================== */
@@ -77,6 +79,7 @@ export const products = pgTable("products", {
     description: text("description"),
 
     isBestSeller: boolean("is_best_seller").default(false),
+    status: productStatusEnum("status").default("DRAFT"),
 
     categoryId: integer("category_id").references(() => categories.id),
 
@@ -99,7 +102,7 @@ export const variants = pgTable("variants", {
     sku: text("sku").unique().notNull(),
 
     price: decimal("price").notNull(),
-    compareAtPrice: decimal("compare_at_price"),
+    originalPrice: decimal("original_price"),
 
     stock: integer("stock").default(0).notNull(),
 

@@ -13,19 +13,16 @@ export interface ListingOverride {
     slugSuffix?: string;
 }
 
+
 export interface ListingConfig {
     showVariantsAsCards: boolean;
-    overrides: Record<string, ListingOverride>;
 }
 
 export interface ProductImageState {
-    main: string;
+    main: string | null;
     gallery: string[];
-    variants?: Record<string, {
-        main: string;
-        gallery: string[];
-    }>;
 }
+
 
 export type ContentBlock =
     | { type: 'header'; data: { text: string; level: 1 | 2 | 3 | 4 | 5 | 6 } }
