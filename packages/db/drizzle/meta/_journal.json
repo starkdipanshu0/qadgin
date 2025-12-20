@@ -8,6 +8,13 @@
       "when": 1766215836803,
       "tag": "0000_dry_darwin",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1766231058692,
+      "tag": "0001_misty_firebrand",
+      "breakpoints": true
     }
   ]
 }

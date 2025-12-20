@@ -5,12 +5,13 @@ import { getAllOrders, getOrderStats, getUserOrders, createOrderInternal } from 
 export const orderRoute = new Hono();
 
 // User Routes
-orderRoute.get("/user-orders", shouldBeUser, getUserOrders);
+orderRoute.get("/me/orders", shouldBeUser, getUserOrders);
 
 // Admin Routes
-orderRoute.get("/orders", shouldBeAdmin, getAllOrders);
-orderRoute.get("/order-chart", shouldBeAdmin, getOrderStats);
+orderRoute.get("/admin/orders", shouldBeAdmin, getAllOrders);
+orderRoute.get("/admin/order-stats", shouldBeAdmin, getOrderStats);
 
 // Internal Service Routes
 orderRoute.post("/internal/create", createOrderInternal);
+
 

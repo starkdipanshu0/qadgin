@@ -16,6 +16,7 @@ export interface ListingOverride {
 
 export interface ListingConfig {
     showVariantsAsCards: boolean;
+    price?: number | string; // Added to support base price
 }
 
 export interface ProductImageState {

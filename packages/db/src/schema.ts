@@ -125,6 +125,7 @@ export const orders = pgTable("orders", {
     userId: text("user_id").notNull(), // Clerk ID (loosely coupled)
 
     status: orderStatusEnum("status").default("PENDING"),
+    paymentId: text("payment_id").unique(), // Idempotency key
 
     subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
     tax: decimal("tax", { precision: 10, scale: 2 }).default("0"),
@@ -146,6 +147,10 @@ export const orderItems = pgTable("order_items", {
     orderId: integer("order_id").references(() => orders.id),
     productId: integer("product_id").references(() => products.id),
     variantId: integer("variant_id").references(() => variants.id),
+
+    name: text("name").notNull(), // Snapshot
+    variantName: text("variant_name"), // Snapshot
+    sku: text("sku"), // Snapshot
 
     quantity: integer("quantity").notNull(),
     price: decimal("price").notNull(), // Snapshot price

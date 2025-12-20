@@ -1,27 +1,38 @@
 import { Context } from "hono";
-import { db, orders, orderItems } from "@repo/db";
-import { desc, eq, sql } from "drizzle-orm";
+import { db, orders, orderItems, products, variants, orderEvents } from "@repo/db";
+import { desc, eq, inArray, sql, and } from "drizzle-orm";
 import { startOfMonth, subMonths } from "date-fns";
-import { OrderChartType, OrderType, OrderProductType } from "@repo/types";
+import { OrderChartType, OrderType, OrderProductType, CreateOrderInput } from "@repo/types";
 import clerkClient from "../utils/clerk";
 
 // 1. Get User Orders
 export const getUserOrders = async (c: Context) => {
     const userId = c.get("userId");
+    const limit = c.req.query("limit") ? Number(c.req.query("limit")) : 20;
+    const offset = c.req.query("offset") ? Number(c.req.query("offset")) : 0;
+
     const userOrders = await db
         .select()
         .from(orders)
-        .where(eq(orders.userId, userId));
+        .where(eq(orders.userId, userId))
+        .orderBy(desc(orders.createdAt))
+        .limit(limit)
+        .offset(offset);
+
     return c.json(userOrders);
 };
 
 // 2. Get All Orders (Admin)
 export const getAllOrders = async (c: Context) => {
-    const limit = c.req.query("limit") ? Number(c.req.query("limit")) : 10;
+    const limit = c.req.query("limit") ? Number(c.req.query("limit")) : 20;
+    const offset = c.req.query("offset") ? Number(c.req.query("offset")) : 0;
+    // Future: Add status filter if needed
+
     const allOrders = await db
         .select()
         .from(orders)
         .limit(limit)
+        .offset(offset)
         .orderBy(desc(orders.createdAt));
     return c.json(allOrders);
 };
@@ -31,32 +42,13 @@ export const getOrderStats = async (c: Context) => {
     const now = new Date();
     const sixMonthsAgo = startOfMonth(subMonths(now, 5));
 
-    const query = sql`
-    SELECT 
-      EXTRACT(YEAR FROM created_at) as year, 
-      EXTRACT(MONTH FROM created_at) as month,
-      COUNT(*) as total,
-      SUM(CASE WHEN status = 'success' OR status = 'PAID' THEN 1 ELSE 0 END) as successful,
-      SUM(CASE WHEN status = 'success' OR status = 'PAID' THEN updated_at ELSE 0 END) as revenue
-    FROM ${orders}
-    WHERE created_at >= ${sixMonthsAgo} AND created_at <= ${now}
-    GROUP BY year, month
-    ORDER BY year, month
-  `;
-    // Note: fixed revenue query to likely use 'total' or 'subtotal' column if available, 
-    // but keeping original logic intention or fixing it. 
-    // Original query used 'amount' which doesn't exist anymore.
-    // Let's use 'total' logic if possible, but for raw SQL we need the column name correctly.
-    // In previous schema update we added 'total'.
-    // Updating SQL query: 
-
     const queryFixed = sql`
     SELECT 
       EXTRACT(YEAR FROM created_at) as year, 
       EXTRACT(MONTH FROM created_at) as month,
       COUNT(*) as total,
-      SUM(CASE WHEN status = 'PAID' THEN 1 ELSE 0 END) as successful,
-      SUM(CASE WHEN status = 'PAID' THEN CAST(total AS DECIMAL) ELSE 0 END) as revenue
+      SUM(CASE WHEN status IN ('PAID', 'SHIPPED', 'DELIVERED') THEN 1 ELSE 0 END) as successful,
+      SUM(CASE WHEN status IN ('PAID', 'SHIPPED', 'DELIVERED') THEN CAST(total AS DECIMAL) ELSE 0 END) as revenue
     FROM ${orders}
     WHERE created_at >= ${sixMonthsAgo} AND created_at <= ${now}
     GROUP BY year, month
@@ -96,36 +88,131 @@ export const getOrderStats = async (c: Context) => {
 
 // 4. Create Order (Internal)
 // Logic originally in utils/order.ts, moving here.
+// 4. Create Order (Internal)
+// Logic originally in utils/order.ts, moving here.
 export const createOrderInternal = async (c: Context) => {
     console.log("ORDER-SERVICE: Received /internal/create request");
-    try {
-        const orderData: OrderType = await c.req.json();
-        console.log("ORDER-SERVICE: Creating Order for User:", orderData.userId);
 
-        // Enrich with email if missing
-        if (!orderData.email) {
+    // 1. Parse Data
+    const orderData = await c.req.json<CreateOrderInput>();
+
+    console.log("ORDER-SERVICE: Creating Order for User:", orderData.userId);
+
+    if (!orderData.products || orderData.products.length === 0) {
+        return c.json({ success: false, message: "No products in order" }, 400);
+    }
+
+    // 2. Idempotency Check
+    if (orderData.paymentId) {
+        const existingOrder = await db.query.orders.findFirst({
+            where: eq(orders.paymentId, orderData.paymentId),
+        });
+
+        if (existingOrder) {
+            console.log("ORDER-SERVICE: Idempotent Success (Order exists):", existingOrder.id);
+            return c.json({ success: true, message: "Order already exists", orderId: existingOrder.id }, 200);
+        }
+    }
+
+    try {
+        // Enriched Email
+        let userEmail = orderData.email;
+        if (!userEmail) {
             try {
                 const user = await clerkClient.users.getUser(orderData.userId);
-                if (user.emailAddresses[0]) {
-                    orderData.email = user.emailAddresses[0]?.emailAddress;
-                }
+                userEmail = user.emailAddresses[0]?.emailAddress;
             } catch (error) {
                 console.error("Failed to fetch user email for order:", error);
             }
         }
 
-        // 1. Create Order (Sequential)
+        // 3. fetch Products for Verification & Snapshotting
+        const productIds = orderData.products.map((p: any) => p.productId);
+        const dbProducts = await db
+            .select()
+            .from(products)
+            .where(inArray(products.id, productIds));
+
+        // Also fetch variants if any
+        const variantIds = orderData.products
+            .map((p: any) => p.variantId)
+            .filter((id: any): id is number => !!id);
+
+        let dbVariants: any[] = [];
+        if (variantIds.length > 0) {
+            dbVariants = await db
+                .select()
+                .from(variants)
+                .where(inArray(variants.id, variantIds));
+        }
+
+        // 4. Calculate Verified Totals & Prepare Items
+        let verifiedSubtotal = 0;
+        const itemsToInsert: any[] = [];
+
+        for (const item of orderData.products) {
+            const product = dbProducts.find((p) => p.id === item.productId);
+            if (!product) {
+                console.error(`Product not found: ${item.productId}`);
+                continue; // Skip or throw? strict: throw.
+                // throw new Error(`Product ${item.productId} not found`);
+            }
+
+            let price = Number(product.listingConfig?.price || 0);
+            let name = product.name;
+            let sku = product.slug; // Fallback SKU
+            let variantName = null;
+
+            // Variant logic
+            if (item.variantId) {
+                const variant = dbVariants.find((v) => v.id === item.variantId);
+                if (variant) {
+                    price = Number(variant.price);
+                    variantName = variant.name;
+                    sku = variant.sku;
+                } else {
+                    // STRICT VALIDATION: If variant ID is sent, it MUST exist.
+                    console.error(`Variant not found: ${item.variantId}`);
+                    return c.json({ success: false, message: `Variant ${item.variantId} not found` }, 400);
+                }
+            }
+
+            // Trusting payload price is dangerous. Use DB price.
+
+            const lineTotal = price * item.quantity;
+            verifiedSubtotal += lineTotal;
+
+            itemsToInsert.push({
+                // orderId will be set later
+                productId: item.productId,
+                variantId: item.variantId || null,
+                quantity: item.quantity,
+                price: price.toString(), // Store unit price at time of purchase
+                name: name,
+                variantName: variantName,
+                sku: sku
+            });
+        }
+
+        const tax = Number(orderData.tax || 0);
+        const shipping = Number(orderData.shipping || 0);
+        const verifiedTotal = verifiedSubtotal + tax + shipping;
+
+        // 5. Insert Order (Sequential)
         console.log("ORDER-SERVICE: Inserting Order...");
         const [newOrder] = await db
             .insert(orders)
             .values({
                 userId: orderData.userId,
-                subtotal: orderData.subtotal.toString(),
-                tax: orderData.tax.toString(),
-                shipping: orderData.shipping.toString(),
-                total: orderData.total.toString(),
+                paymentId: orderData.paymentId || null,
+                // Use verified totals
+                subtotal: verifiedSubtotal.toFixed(2),
+                tax: tax.toFixed(2),
+                shipping: shipping.toFixed(2),
+                total: verifiedTotal.toFixed(2),
+
                 currency: orderData.currency || "INR",
-                status: (orderData.status || "PENDING") as "PENDING" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED",
+                status: (orderData.status || "PENDING") as any,
             })
             .returning();
 
@@ -134,20 +221,21 @@ export const createOrderInternal = async (c: Context) => {
         }
         console.log("ORDER-SERVICE: Order Created ID:", newOrder.id);
 
-        // 2. Create Order Items
-        if (orderData.products && orderData.products.length > 0) {
+        // 6. Insert Items
+        if (itemsToInsert.length > 0) {
             console.log("ORDER-SERVICE: Inserting Items...");
-            const itemsToInsert = orderData.products.map((p: OrderProductType) => ({
-                orderId: newOrder.id,
-                productId: p.productId,
-                variantId: p.variantId || null,
-                quantity: p.quantity,
-                price: p.price.toString(),
-            }));
+            const finalItems = itemsToInsert.map(i => ({ ...i, orderId: newOrder.id }));
 
-            await db.insert(orderItems).values(itemsToInsert);
+            await db.insert(orderItems).values(finalItems);
             console.log("ORDER-SERVICE: Items Inserted");
         }
+
+        // 7. Insert Initial Event
+        await db.insert(orderEvents).values({
+            orderId: newOrder.id,
+            status: "Order Placed",
+        });
+        console.log("ORDER-SERVICE: Initial Event Created");
 
         return c.json({ success: true, message: "Order created successfully", orderId: newOrder.id }, 201);
     } catch (error) {
