@@ -1,0 +1,89 @@
+[
+    {
+        "name": "Urban Comfort Oxford Shirt",
+        "slug": "urban-comfort-oxford-shirt",
+        "tagline": "Timeless style meets modern comfort",
+        "shortDescription": "A premium cotton Oxford shirt available in a variety of colors and shades to suit your unique style.",
+        "description": "Experience the perfect blend of style and comfort with our Urban Comfort Oxford Shirt. Crafted from high-quality, breathable cotton, this shirt is designed to keep you looking sharp and feeling great all day long. Whether you're dressing up for a meeting or keeping it casual for a weekend brunch, the versatile design and wide range of color options make it a wardrobe essential. Features a classic button-down collar, adjustable cuffs, and a tailored fit.",
+        "categoryId": 1,
+        "status": "PUBLISHED",
+        "isBestSeller": true,
+        "content": {
+            "blocks": [
+                {
+                    "type": "header",
+                    "data": {
+                        "text": "Product Features",
+                        "level": 3
+                    }
+                },
+                {
+                    "type": "list",
+                    "data": {
+                        "style": "unordered",
+                        "items": [
+                            "100% Premium Cotton",
+                            "Breathable and durable fabric",
+                            "Classic fit",
+                            "Machine washable"
+                        ]
+                    }
+                }
+            ]
+        },
+        "listingConfig": {
+            "showVariantsAsCards": true,
+            "price": 49.99
+        },
+        "basePrice": 49.99,
+        "baseStock": 50,
+        "images": {
+            "main": "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=800&q=80",
+            "gallery": [
+                "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=800&q=80",
+                "https://images.unsplash.com/photo-1589310243389-96a5483213a8?auto=format&fit=crop&w=800&q=80"
+            ]
+        },
+        "options": [
+            {
+                "name": "Color",
+                "values": [
+                    "Red",
+                    "Blue",
+                    "Green"
+                ]
+            },
+            {
+                "name": "Shade",
+                "values": [
+                    "Light",
+                    "Medium",
+                    "Dark"
+                ]
+            }
+        ],
+        "variantOverrides": [
+            {
+                "match": {
+                    "Color": "Red",
+                    "Shade": "Light"
+                },
+                "price": 45.00,
+                "stock": 50
+            },
+            {
+                "match": {
+                    "Color": "Blue",
+                    "Shade": "Dark"
+                },
+                "price": 52.00,
+                "stock": 35
+            }
+        ],
+        "imageMap": {
+            "Red": "https://images.unsplash.com/photo-1588359348347-9bc6c5a086c5?auto=format&fit=crop&w=800&q=80",
+            "Blue": "https://images.unsplash.com/photo-1555529452-e5559c558c4c?auto=format&fit=crop&w=800&q=80",
+            "Green": "https://images.unsplash.com/photo-1621072156002-e2982c77b6ae?auto=format&fit=crop&w=800&q=80"
+        }
+    }
+]

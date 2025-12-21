@@ -5,6 +5,8 @@ import { eq, like, and, asc, desc, sql } from "drizzle-orm";
 
 
 
+import { generateVariants, CompactProductInput } from "../utils/variant-generator";
+
 // export const createProduct = async (c: Context) => {
 //   const data = await c.req.json();
 
@@ -580,4 +582,95 @@ export const getProductById = async (c: Context) => {
     price: displayPrice,
     originalPrice: displayOriginalPrice
   });
+};
+
+export const createProductGenerative = async (c: Context) => {
+  const data = await c.req.json();
+
+  // -------- Validation --------
+  if (!data?.name || !data?.options || !Array.isArray(data.options)) {
+    return c.json({ message: "Product name and options array are required" }, 400);
+  }
+
+  // -------- Slug Generation --------
+  let baseSlug = data.name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  let slug = baseSlug;
+  let suffix = 1;
+
+  while (
+    await db.query.products.findFirst({
+      where: eq(products.slug, slug),
+    })
+  ) {
+    slug = `${baseSlug}-${suffix++}`;
+  }
+
+  // -------- Generate Variants --------
+  // This is the "Smart" part
+  const generatedVariants = generateVariants({
+    ...data,
+    slug // Pass the unique slug we just generated
+  });
+
+  console.log(`GENERATIVE: Generated ${generatedVariants.length} variants for ${data.name}`);
+
+  // -------- Insert Product --------
+  const [product] = await db
+    .insert(products)
+    .values({
+      name: data.name,
+      slug,
+      tagline: data.tagline,
+      shortDescription: data.shortDescription,
+      categoryId: data.categoryId,
+      attributes: {
+        // Store the top-level options as attributes on the parent
+        ...data.options.reduce((acc: any, opt: any) => {
+          acc[opt.name] = opt.values;
+          return acc;
+        }, {})
+      },
+      images: data.images,
+      listingConfig: {
+        price: String(data.basePrice),
+        showVariantsAsCards: true // Default to true for generative products
+      },
+      content: data.content,
+      isBestSeller: data.isBestSeller ?? false,
+      status: "PUBLISHED"
+    })
+    .returning();
+
+  if (!product) {
+    throw new Error("Product creation failed");
+  }
+
+  // -------- Insert Variants --------
+  if (generatedVariants.length > 0) {
+    const variantsToInsert = generatedVariants.map((v) => ({
+      productId: product.id,
+      name: v.name,
+      sku: v.sku,
+      price: v.price,
+      stock: v.stock,
+      attributes: v.attributes,
+      images: v.images,
+    }));
+
+    await db.insert(variants).values(variantsToInsert);
+  }
+
+  // -------- Return Result --------
+  const fullProduct = await db.query.products.findFirst({
+    where: eq(products.id, product.id),
+    with: { variants: true },
+  });
+
+  return c.json(fullProduct, 201);
 };

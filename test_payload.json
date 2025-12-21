@@ -1,0 +1,45 @@
+{
+    "name": "Developer Hoodie v1",
+    "basePrice": 49.99,
+    "baseStock": 50,
+    "categoryId": 1,
+    "description": "The perfect hoodie for late night coding sessions.",
+    "images": {
+        "main": "https://example.com/hoodie_black_front.jpg",
+        "gallery": [
+            "https://example.com/hoodie_black_back.jpg"
+        ]
+    },
+    "options": [
+        {
+            "name": "Color",
+            "values": [
+                "Black",
+                "Heather Grey"
+            ]
+        },
+        {
+            "name": "Size",
+            "values": [
+                "S",
+                "M",
+                "L",
+                "XL",
+                "XXL"
+            ]
+        }
+    ],
+    "variantOverrides": [
+        {
+            "match": {
+                "Size": "XXL"
+            },
+            "price": 54.99,
+            "stock": 20
+        }
+    ],
+    "imageMap": {
+        "Black": "https://example.com/hoodie_black_front.jpg",
+        "Heather Grey": "https://example.com/hoodie_grey_front.jpg"
+    }
+}

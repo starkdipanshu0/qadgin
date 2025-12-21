@@ -1,0 +1,222 @@
+[
+  {
+    "name": "Urban Comfort Oxford Shirt",
+    "slug": "urban-comfort-oxford-shirt",
+    "tagline": "Timeless style meets modern comfort",
+    "shortDescription": "A premium cotton Oxford shirt available in a variety of colors and shades to suit your unique style.",
+    "description": "Experience the perfect blend of style and comfort with our Urban Comfort Oxford Shirt. Crafted from high-quality, breathable cotton, this shirt is designed to keep you looking sharp and feeling great all day long. Whether you're dressing up for a meeting or keeping it casual for a weekend brunch, the versatile design and wide range of color options make it a wardrobe essential. Features a classic button-down collar, adjustable cuffs, and a tailored fit.",
+    "categoryId": 1,
+    "status": "PUBLISHED",
+    "isBestSeller": true,
+    "content": {
+      "blocks": [
+        {
+          "type": "header",
+          "data": {
+            "text": "Product Features",
+            "level": 3
+          }
+        },
+        {
+          "type": "list",
+          "data": {
+            "style": "unordered",
+            "items": [
+              "100% Premium Cotton",
+              "Breathable and durable fabric",
+              "Classic fit",
+              "Machine washable"
+            ]
+          }
+        }
+      ]
+    },
+    "listingConfig": {
+      "showVariantsAsCards": true,
+      "price": 49.99
+    },
+    "images": {
+      "main": "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=800&q=80",
+      "gallery": [
+        "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1589310243389-96a5483213a8?auto=format&fit=crop&w=800&q=80"
+      ]
+    },
+    "attributes": {
+      "Color": [
+        "Red",
+        "Blue",
+        "Green"
+      ],
+      "Shade": [
+        "Light",
+        "Medium",
+        "Dark"
+      ]
+    },
+    "variants": [
+      {
+        "name": "Urban Comfort Oxford Shirt - Red / Light",
+        "sku": "URBAN-COMFORT-OXFORD-SHIRT-RED-LIGHT",
+        "price": "45",
+        "stock": 50,
+        "attributes": {
+          "Color": [
+            "Red"
+          ],
+          "Shade": [
+            "Light"
+          ]
+        },
+        "images": {
+          "main": "https://images.unsplash.com/photo-1588359348347-9bc6c5a086c5?auto=format&fit=crop&w=800&q=80",
+          "gallery": []
+        }
+      },
+      {
+        "name": "Urban Comfort Oxford Shirt - Red / Medium",
+        "sku": "URBAN-COMFORT-OXFORD-SHIRT-RED-MEDIUM",
+        "price": "49.99",
+        "stock": 50,
+        "attributes": {
+          "Color": [
+            "Red"
+          ],
+          "Shade": [
+            "Medium"
+          ]
+        },
+        "images": {
+          "main": "https://images.unsplash.com/photo-1588359348347-9bc6c5a086c5?auto=format&fit=crop&w=800&q=80",
+          "gallery": []
+        }
+      },
+      {
+        "name": "Urban Comfort Oxford Shirt - Red / Dark",
+        "sku": "URBAN-COMFORT-OXFORD-SHIRT-RED-DARK",
+        "price": "49.99",
+        "stock": 50,
+        "attributes": {
+          "Color": [
+            "Red"
+          ],
+          "Shade": [
+            "Dark"
+          ]
+        },
+        "images": {
+          "main": "https://images.unsplash.com/photo-1588359348347-9bc6c5a086c5?auto=format&fit=crop&w=800&q=80",
+          "gallery": []
+        }
+      },
+      {
+        "name": "Urban Comfort Oxford Shirt - Blue / Light",
+        "sku": "URBAN-COMFORT-OXFORD-SHIRT-BLUE-LIGHT",
+        "price": "49.99",
+        "stock": 50,
+        "attributes": {
+          "Color": [
+            "Blue"
+          ],
+          "Shade": [
+            "Light"
+          ]
+        },
+        "images": {
+          "main": "https://images.unsplash.com/photo-1555529452-e5559c558c4c?auto=format&fit=crop&w=800&q=80",
+          "gallery": []
+        }
+      },
+      {
+        "name": "Urban Comfort Oxford Shirt - Blue / Medium",
+        "sku": "URBAN-COMFORT-OXFORD-SHIRT-BLUE-MEDIUM",
+        "price": "49.99",
+        "stock": 50,
+        "attributes": {
+          "Color": [
+            "Blue"
+          ],
+          "Shade": [
+            "Medium"
+          ]
+        },
+        "images": {
+          "main": "https://images.unsplash.com/photo-1555529452-e5559c558c4c?auto=format&fit=crop&w=800&q=80",
+          "gallery": []
+        }
+      },
+      {
+        "name": "Urban Comfort Oxford Shirt - Blue / Dark",
+        "sku": "URBAN-COMFORT-OXFORD-SHIRT-BLUE-DARK",
+        "price": "52",
+        "stock": 35,
+        "attributes": {
+          "Color": [
+            "Blue"
+          ],
+          "Shade": [
+            "Dark"
+          ]
+        },
+        "images": {
+          "main": "https://images.unsplash.com/photo-1555529452-e5559c558c4c?auto=format&fit=crop&w=800&q=80",
+          "gallery": []
+        }
+      },
+      {
+        "name": "Urban Comfort Oxford Shirt - Green / Light",
+        "sku": "URBAN-COMFORT-OXFORD-SHIRT-GREEN-LIGHT",
+        "price": "49.99",
+        "stock": 50,
+        "attributes": {
+          "Color": [
+            "Green"
+          ],
+          "Shade": [
+            "Light"
+          ]
+        },
+        "images": {
+          "main": "https://images.unsplash.com/photo-1621072156002-e2982c77b6ae?auto=format&fit=crop&w=800&q=80",
+          "gallery": []
+        }
+      },
+      {
+        "name": "Urban Comfort Oxford Shirt - Green / Medium",
+        "sku": "URBAN-COMFORT-OXFORD-SHIRT-GREEN-MEDIUM",
+        "price": "49.99",
+        "stock": 50,
+        "attributes": {
+          "Color": [
+            "Green"
+          ],
+          "Shade": [
+            "Medium"
+          ]
+        },
+        "images": {
+          "main": "https://images.unsplash.com/photo-1621072156002-e2982c77b6ae?auto=format&fit=crop&w=800&q=80",
+          "gallery": []
+        }
+      },
+      {
+        "name": "Urban Comfort Oxford Shirt - Green / Dark",
+        "sku": "URBAN-COMFORT-OXFORD-SHIRT-GREEN-DARK",
+        "price": "49.99",
+        "stock": 50,
+        "attributes": {
+          "Color": [
+            "Green"
+          ],
+          "Shade": [
+            "Dark"
+          ]
+        },
+        "images": {
+          "main": "https://images.unsplash.com/photo-1621072156002-e2982c77b6ae?auto=format&fit=crop&w=800&q=80",
+          "gallery": []
+        }
+      }
+    ]
+  }
+]
