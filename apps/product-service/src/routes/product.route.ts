@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import {
   createProduct,
   deleteProduct,
+  getProduct,
   getProductById,
   getProductBySlug,
   getProducts,
@@ -19,6 +20,6 @@ app.delete("/:id", shouldBeAdmin, deleteProduct);
 // Storefront
 app.get("/", getProducts);
 app.get("/slug/:slug", getProductBySlug);
-app.get("/:id", getProductById);
+app.get("/:id", getProduct);
 
 export default app;

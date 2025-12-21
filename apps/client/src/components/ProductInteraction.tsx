@@ -9,14 +9,12 @@ import { toast } from "react-toastify";
 
 interface ProductInteractionProps {
   product: ProductType;
-  initialSelectedSize: string;
-  initialSelectedFlavor: string;
+  selectedAttributes: Record<string, string>;
 }
 
 const ProductInteraction = ({
   product,
-  initialSelectedSize,
-  initialSelectedFlavor,
+  selectedAttributes,
 }: ProductInteractionProps) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -32,23 +30,20 @@ const ProductInteraction = ({
     return product.attributes || {};
   }, [product.attributes]);
 
-  // Handle URL updates - We can generalize this, but for now map 'Flavor' -> 'flavor' param etc.
-  // Ideally, query params should match attribute keys: ?Color=Red&Size=L
+  // Handle URL updates - Generic for ANY attribute
   const handleOptionChange = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    // Normalize key for URL if needed (e.g. Flavor -> flavor)
-    const paramKey = key.toLowerCase() === "flavor" ? "flavor" : key.toLowerCase() === "size" ? "size" : key;
-    params.set(paramKey, value);
+    params.set(key, value);
+
+    // Also update generic "variant" param removal if we are switching attributes?
+    // If we select attributes manually, we might drift from the ?variant=ID logic
+    // But page.tsx handles that by resolving attributes -> variant ID. 
+    // We should probably keep 'variant' param or let page resolve new one.
+    // For purity: if we change an option, we are essentially requesting a new variant combination.
+    // We keep it simple: just update the attribute param. page.tsx re-resolves the variant ID.
+
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
-
-  const currentSelection = (key: string) => {
-    // Map specific known keys to the props passed in (which come from URL params in page.tsx)
-    if (key === "Flavor") return initialSelectedFlavor;
-    if (key === "Size" || key === "Pack Size") return initialSelectedSize;
-    // Fallback to checking URL params directly for generic attributes
-    return searchParams.get(key) || "";
-  }
 
   const handleQuantityChange = (type: "increment" | "decrement") => {
     if (type === "increment") {
@@ -63,14 +58,22 @@ const ProductInteraction = ({
   const handleAddToCart = () => {
     setIsAdding(true);
     setTimeout(() => {
+      // Convert generic attributes to string for legacy store support
+      const specs = Object.entries(selectedAttributes)
+        .map(([k, v]) => `${v}`)
+        .join(" / ");
+
+      // Try to map to legacy keys if possible for backward compat
+      const legacyColor = selectedAttributes["Flavor"] || selectedAttributes["Color"] || "";
+      const legacySize = selectedAttributes["Size"] || selectedAttributes["Pack Size"] || "";
+
       addToCart({
         ...product,
         quantity,
-        selectedColor: initialSelectedFlavor, // Legacy prop name in store
-        selectedSize: initialSelectedSize,    // Legacy prop name in store
+        selectedColor: legacyColor,
+        selectedSize: specs,
         price: Number(product.price),
         originalPrice: Number(product.originalPrice || 0),
-        // Pass generic attributes if store supports them later
       });
       toast.success(
         <div>
@@ -82,11 +85,16 @@ const ProductInteraction = ({
   };
 
   const handleBuyNow = () => {
+    const specs = Object.entries(selectedAttributes)
+      .map(([k, v]) => `${v}`)
+      .join(" / ");
+    const legacyColor = selectedAttributes["Flavor"] || selectedAttributes["Color"] || "";
+
     addToCart({
       ...product,
       quantity,
-      selectedColor: initialSelectedFlavor,
-      selectedSize: initialSelectedSize,
+      selectedColor: legacyColor,
+      selectedSize: specs,
       price: Number(product.price),
       originalPrice: Number(product.originalPrice || 0),
     });
@@ -111,7 +119,7 @@ const ProductInteraction = ({
             </span>
             <div className="flex flex-wrap gap-3">
               {values.map((val) => {
-                const isSelected = currentSelection(key) === val;
+                const isSelected = selectedAttributes[key] === val;
                 return (
                   <button
                     key={val}

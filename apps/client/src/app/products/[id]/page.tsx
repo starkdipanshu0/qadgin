@@ -45,80 +45,101 @@ const ProductPage = async ({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ flavor?: string; size?: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) => {
-  const { size, flavor } = await searchParams;
-  const { id } = await params;
+  const resolvedSearchParams = await searchParams;
+  // const { variant } = resolvedSearchParams; // We extract variant ID if explicit
+  const variantParam = resolvedSearchParams.variant as string | undefined;
 
+  const { id } = await params;
   const product = await fetchProduct(id);
 
   if (!product) {
     return <div className="text-center py-20 text-stone-500">Product not found.</div>;
   }
 
-  // 1. Determine Defaults based on new data structure (Attributes)
-  // 1. Determine Defaults based on new data structure (Attributes)
-  const getFirst = (keys: string[]) => {
-    if (!product.attributes) return "";
-    for (const key of keys) {
-      const vals = product.attributes[key];
-      if (vals && vals.length > 0) return vals[0];
-    }
-    return "";
+  // Helper to extract attributes from a variant object
+  const extractVariantAttrs = (v: any) => {
+    const attrs = v.attributes;
+    // Fallback legacy logic for initial state if needed, but we rely on matching logic mainly
+    const f = attrs["Flavor"]?.[0] || attrs["Color"]?.[0] || attrs["Variant"]?.[0] || "";
+    const s = attrs["Size"]?.[0] || attrs["Pack Size"]?.[0] || attrs["Weight"]?.[0] || "";
+    return { f, s };
   };
 
-  // Logic to handle Virtual Product Pre-selection
-  let virtualFlavor = "";
-  let virtualSize = "";
+  // 1. Identify "Target Variant" Logic
+  // Hierarchy: 
+  // A. Explicit ?variant=ID (Strongest)
+  // B. Attribute Match from ?color=red&size=xl
+  // C. Virtual Product ID (from URL segment)
+  // D. Default (First variant)
 
-  if (product.isVirtual && product.variantId && product.variants) {
-    const vId = product.variantId;
-    const v = product.variants.find((item) => item.id === vId);
-    if (v && v.attributes) {
-      // Attributes are string[] in DB/Types, but usually length 1 for variants?
-      // accessing first element safely
-      const attrs = v.attributes;
-      virtualFlavor = attrs["Flavor"]?.[0] || attrs["Color"]?.[0] || attrs["Variant"]?.[0] || "";
-      virtualSize = attrs["Size"]?.[0] || attrs["Pack Size"]?.[0] || attrs["Weight"]?.[0] || "";
-    }
+  let activeVariantID: number | undefined;
+
+  // A. Explicit ID
+  if (variantParam && product.variants) {
+    const v = product.variants.find((item) => String(item.id) === String(variantParam));
+    if (v) activeVariantID = v.id;
   }
 
-  const defaultFlavor = getFirst(["Flavor", "Color", "Variant"]);
-  const defaultSize = getFirst(["Size", "Pack Size", "Weight"]);
+  // B. Attribute Matching (if no explicit variant found yet)
+  if (!activeVariantID && product.variants) {
+    const matchingVariant = product.variants.find(v => {
+      if (!v.attributes) return false;
+      // Check if EVERY param provided in URL matches this variant
+      // We ignore 'variant' param here
+      const urlKeys = Object.keys(resolvedSearchParams).filter(k => k !== "variant");
+      if (urlKeys.length === 0) return false;
 
-  const selectedFlavor = flavor || virtualFlavor || defaultFlavor || "";
-  const selectedSize = size || virtualSize || defaultSize || "";
+      return urlKeys.every(key => {
+        const urlValue = resolvedSearchParams[key];
+        if (!urlValue || typeof urlValue !== 'string') return true; // Skip complex params
 
-  // 2. Find Active Variant
-  // We check for variants that match the selected attributes
-  const activeVariant = product.variants?.find((v) => {
-    const vAttrs = v.attributes;
-    if (!vAttrs) return false;
+        // Variant attribute values (array or string)
+        const vVals = v.attributes?.[key]; // Key case sensitivity??
+        // Try exact match first, then case-insensitive key search if needed?
+        // ProductCard sends explicit keys (e.g. "Flavor"), so exact match should work.
 
-    // Check if variant has the selected attribute values
-    // We treat variant attributes as single string or array
-    const hasValue = (val: string) => {
-      if (!val) return true; // checking empty is partial match? No, if selected is empty, we ignore
-      return Object.values(vAttrs).some(vVal =>
-        Array.isArray(vVal) ? vVal.includes(val) : vVal === val
-      );
-    };
+        if (!vVals) return false; // Variant doesn't have this attribute involved
 
-    // Strict match if both selected?
-    // For now: try to match flavor AND size if they are selected
-    if (selectedFlavor && selectedSize) return hasValue(selectedFlavor) && hasValue(selectedSize);
-    if (selectedFlavor) return hasValue(selectedFlavor);
-    if (selectedSize) return hasValue(selectedSize);
-    return false;
-  });
+        const valuesArr = Array.isArray(vVals) ? vVals : [vVals];
+        return valuesArr.includes(urlValue);
+      });
+    });
+
+    if (matchingVariant) activeVariantID = matchingVariant.id;
+  }
+
+  // C. Virtual ID from segment
+  if (!activeVariantID && product.isVirtual && product.variantId) {
+    activeVariantID = product.variantId;
+  }
+
+  // Resolve Active Variant Object
+  const activeVariant = activeVariantID
+    ? product.variants?.find(v => v.id === activeVariantID)
+    : undefined;
+
+  // Derive Selections for UI (fallback to defaults if no active variant)
+  const selectedAttributes: Record<string, string> = {};
+
+  if (activeVariant && activeVariant.attributes) {
+    // If we have an active variant, its attributes are the selection
+    Object.entries(activeVariant.attributes as Record<string, any>).forEach(([k, v]) => {
+      if (Array.isArray(v) && v.length > 0) selectedAttributes[k] = v[0];
+      else if (typeof v === 'string') selectedAttributes[k] = v;
+    });
+  } else if (product.attributes) {
+    // Fallback: Select first option for every available attribute
+    Object.entries(product.attributes as Record<string, any>).forEach(([k, v]) => {
+      if (Array.isArray(v) && v.length > 0) selectedAttributes[k] = v[0];
+    });
+  }
 
   // 3. Determine Image based on variant or fallback to main
-  let currentImage = "";
-  if (activeVariant?.images?.main) {
-    currentImage = activeVariant.images.main;
-  } else if (product.images?.main) {
-    currentImage = product.images.main;
-  }
+  // 3. Determine Image based on variant or fallback to main
+  // Use optional chaining and logical OR to safely resolve string | undefined
+  const currentImage = activeVariant?.images?.main || product.images?.main || "";
 
   console.log("current image:", currentImage);
 
@@ -227,8 +248,7 @@ const ProductPage = async ({
             {/* We pass the *initial* selected values from URL params to the client component */}
             <ProductInteraction
               product={effectiveProduct}
-              initialSelectedSize={selectedSize}
-              initialSelectedFlavor={selectedFlavor}
+              selectedAttributes={selectedAttributes}
             />
 
             {/* TRUST SIGNALS (Replaces generic payment icons) */}

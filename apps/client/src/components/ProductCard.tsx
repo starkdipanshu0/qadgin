@@ -57,8 +57,27 @@ const ProductCard = ({ product }: { product: ProductType }) => {
   // 3. CALCULATE URL
   const getProductUrl = () => {
     if (product.isVirtual && product.variantId) {
-      const base = product.slug || product.id;
-      return `/products/${base}-v-${product.variantId}`;
+      const base = product.slug || String(product.id).split("-v-")[0];
+
+      // Build Readable Query Params
+      const params = new URLSearchParams();
+      params.set("variant", String(product.variantId)); // Keep ID for robustness
+
+      if (product.attributes) {
+        Object.entries(product.attributes).forEach(([key, values]) => {
+          if (values && values.length > 0) {
+            // Standardize keys to lowercase for cleaner URLs? Or keep as is? 
+            // Keeping as is fits "Variant" data, but lowercase key is nicer URL.
+            // Let's use the actual key name for clarity.
+            const val = values[0];
+            if (val) {
+              params.set(key, val);
+            }
+          }
+        });
+      }
+
+      return `/products/${base}?${params.toString()}`;
     }
     return `/products/${product.slug || product.id}`;
   };

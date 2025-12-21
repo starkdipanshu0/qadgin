@@ -1,0 +1,50 @@
+{
+    "name": "Urban Comfort Oxford Shirt",
+    "slug": "urban-comfort-oxford-shirt",
+    "basePrice": 49.99,
+    "baseStock": 50,
+    "description": "...",
+    "//_comment": "Define the dimensions of variance here. The backend generates the Cartesian product (3x3=9 variants).",
+    "options": [
+        {
+            "name": "Color",
+            "values": [
+                "Red",
+                "Blue",
+                "Green"
+            ]
+        },
+        {
+            "name": "Shade",
+            "values": [
+                "Light",
+                "Medium",
+                "Dark"
+            ]
+        }
+    ],
+    "//_comment": "Only specify data that DIFFERS from the defaults/base. Everything else is auto-generated.",
+    "variantOverrides": [
+        {
+            "match": {
+                "Color": "Red",
+                "Shade": "Light"
+            },
+            "price": 45.00,
+            "stock": 50
+        },
+        {
+            "match": {
+                "Color": "Blue",
+                "Shade": "Dark"
+            },
+            "price": 52.00,
+            "stock": 35
+        }
+    ],
+    "//_comment": "Images can be mapped to attribute values rather than specific variants to repetition.",
+    "imageMap": {
+        "Red": "https://images.unsplash.com/photo-red...",
+        "Blue": "https://images.unsplash.com/photo-blue..."
+    }
+}

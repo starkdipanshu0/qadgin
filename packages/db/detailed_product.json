@@ -1,0 +1,229 @@
+{
+    "name": "Urban Comfort Oxford Shirt",
+    "slug": "urban-comfort-oxford-shirt",
+    "tagline": "Timeless style meets modern comfort",
+    "shortDescription": "A premium cotton Oxford shirt available in a variety of colors and shades to suit your unique style.",
+    "description": "Experience the perfect blend of style and comfort with our Urban Comfort Oxford Shirt. Crafted from high-quality, breathable cotton, this shirt is designed to keep you looking sharp and feeling great all day long. Whether you're dressing up for a meeting or keeping it casual for a weekend brunch, the versatile design and wide range of color options make it a wardrobe essential. Features a classic button-down collar, adjustable cuffs, and a tailored fit.",
+    "categoryId": 1,
+    "status": "PUBLISHED",
+    "isBestSeller": true,
+    "content": {
+        "blocks": [
+            {
+                "type": "header",
+                "data": {
+                    "text": "Product Features",
+                    "level": 3
+                }
+            },
+            {
+                "type": "list",
+                "data": {
+                    "style": "unordered",
+                    "items": [
+                        "100% Premium Cotton",
+                        "Breathable and durable fabric",
+                        "Classic fit",
+                        "Machine washable"
+                    ]
+                }
+            }
+        ]
+    },
+    "attributes": {
+        "Color": [
+            "Red",
+            "Blue",
+            "Green"
+        ],
+        "Shade": [
+            "Light",
+            "Medium",
+            "Dark"
+        ]
+    },
+    "listingConfig": {
+        "showVariantsAsCards": true,
+        "price": 49.99
+    },
+    "images": {
+        "main": "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=800&q=80",
+        "gallery": [
+            "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1589310243389-96a5483213a8?auto=format&fit=crop&w=800&q=80"
+        ]
+    },
+    "variants": [
+        {
+            "name": "Red / Light",
+            "sku": "SHIRT-RED-LGT",
+            "price": "45.00",
+            "originalPrice": "55.00",
+            "stock": 50,
+            "attributes": {
+                "Color": [
+                    "Red"
+                ],
+                "Shade": [
+                    "Light"
+                ]
+            },
+            "images": {
+                "main": "https://images.unsplash.com/photo-1588359348347-9bc6c5a086c5?auto=format&fit=crop&w=800&q=80",
+                "gallery": []
+            }
+        },
+        {
+            "name": "Red / Medium",
+            "sku": "SHIRT-RED-MED",
+            "price": "47.50",
+            "originalPrice": "58.00",
+            "stock": 45,
+            "attributes": {
+                "Color": [
+                    "Red"
+                ],
+                "Shade": [
+                    "Medium"
+                ]
+            },
+            "images": {
+                "main": "https://images.unsplash.com/photo-1576566588028-4147f3842f27?auto=format&fit=crop&w=800&q=80",
+                "gallery": []
+            }
+        },
+        {
+            "name": "Red / Dark",
+            "sku": "SHIRT-RED-DRK",
+            "price": "49.99",
+            "originalPrice": "60.00",
+            "stock": 40,
+            "attributes": {
+                "Color": [
+                    "Red"
+                ],
+                "Shade": [
+                    "Dark"
+                ]
+            },
+            "images": {
+                "main": "https://images.unsplash.com/photo-1516257984-b1b4d8c9b30b?auto=format&fit=crop&w=800&q=80",
+                "gallery": []
+            }
+        },
+        {
+            "name": "Blue / Light",
+            "sku": "SHIRT-BLU-LGT",
+            "price": "46.00",
+            "originalPrice": "56.00",
+            "stock": 60,
+            "attributes": {
+                "Color": [
+                    "Blue"
+                ],
+                "Shade": [
+                    "Light"
+                ]
+            },
+            "images": {
+                "main": "https://images.unsplash.com/photo-1555529452-e5559c558c4c?auto=format&fit=crop&w=800&q=80",
+                "gallery": []
+            }
+        },
+        {
+            "name": "Blue / Medium",
+            "sku": "SHIRT-BLU-MED",
+            "price": "48.50",
+            "originalPrice": "59.00",
+            "stock": 55,
+            "attributes": {
+                "Color": [
+                    "Blue"
+                ],
+                "Shade": [
+                    "Medium"
+                ]
+            },
+            "images": {
+                "main": "https://images.unsplash.com/photo-1598532163257-522600490899?auto=format&fit=crop&w=800&q=80",
+                "gallery": []
+            }
+        },
+        {
+            "name": "Blue / Dark",
+            "sku": "SHIRT-BLU-DRK",
+            "price": "52.00",
+            "originalPrice": "65.00",
+            "stock": 35,
+            "attributes": {
+                "Color": [
+                    "Blue"
+                ],
+                "Shade": [
+                    "Dark"
+                ]
+            },
+            "images": {
+                "main": "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?auto=format&fit=crop&w=800&q=80",
+                "gallery": []
+            }
+        },
+        {
+            "name": "Green / Light",
+            "sku": "SHIRT-GRN-LGT",
+            "price": "44.00",
+            "originalPrice": "54.00",
+            "stock": 70,
+            "attributes": {
+                "Color": [
+                    "Green"
+                ],
+                "Shade": [
+                    "Light"
+                ]
+            },
+            "images": {
+                "main": "https://images.unsplash.com/photo-1621072156002-e2982c77b6ae?auto=format&fit=crop&w=800&q=80",
+                "gallery": []
+            }
+        },
+        {
+            "name": "Green / Medium",
+            "sku": "SHIRT-GRN-MED",
+            "price": "47.00",
+            "originalPrice": "57.00",
+            "stock": 65,
+            "attributes": {
+                "Color": [
+                    "Green"
+                ],
+                "Shade": [
+                    "Medium"
+                ]
+            },
+            "images": {
+                "main": "https://images.unsplash.com/photo-1616196160105-0259b1fbd2c4?auto=format&fit=crop&w=800&q=80",
+                "gallery": []
+            }
+        },
+        {
+            "name": "Green / Dark",
+            "sku": "SHIRT-GRN-DRK",
+            "price": "50.50",
+            "originalPrice": "62.00",
+            "stock": 30,
+            "attributes": {
+                "Color": [
+                    "Green"
+                ],
+                "Shade": [
+                    "Dark"
+                ]
+            },
+            "images": {
+                "main": "https://images.unsplash.com/photo-1620799140408-ed5341cd2431?auto=format&fit=crop&w=800&q=80",
+                "gallery": []
+            }
+        }
+    ]
+}

@@ -4,6 +4,7 @@ import SearchBar from "./SearchBar";
 import ShoppingCartIcon from "./ShoppingCartIcon";
 import ProfileButton from "./ProfileButton";
 import { Bell, Menu, Search } from "lucide-react"; // Added Menu for mobile
+import { Suspense } from "react";
 import {
   SignedIn,
   SignedOut,
@@ -24,7 +25,7 @@ const Navbar = () => {
     <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-slate-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
-          
+
           {/* LEFT: Logo & Brand */}
           <Link href="/" className="flex items-center gap-2 group">
             <div className="relative w-10 h-10 overflow-hidden rounded-full bg-emerald-50 flex items-center justify-center">
@@ -56,12 +57,16 @@ const Navbar = () => {
 
           {/* RIGHT: Actions */}
           <div className="flex items-center gap-4 md:gap-6">
+
+
             {/* Search Bar - You might want to hide the full bar on mobile and show an icon instead */}
             <div className="hidden md:block">
-              <SearchBar />
+              <Suspense fallback={<div className="w-[200px] h-[30px] bg-slate-100 rounded-md animate-pulse" />}>
+                <SearchBar />
+              </Suspense>
             </div>
             <button className="md:hidden text-slate-600">
-                <Search className="w-5 h-5" />
+              <Search className="w-5 h-5" />
             </button>
 
             {/* Notifications */}
@@ -79,19 +84,19 @@ const Navbar = () => {
             <div className="flex items-center">
               <SignedOut>
                 <div className="hidden md:flex gap-2">
-                    <SignInButton mode="modal">
-                        <button className="text-sm font-medium text-slate-600 hover:text-emerald-600 px-3 py-2">Sign In</button>
-                    </SignInButton>
-                    <span className="text-slate-300">|</span>
-                    <SignUpButton mode="modal">
-                        <button className="text-sm font-medium bg-emerald-600 text-white px-4 py-2 rounded-full hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-200">
-                            Get Started
-                        </button>
-                    </SignUpButton>
+                  <SignInButton mode="modal">
+                    <button className="text-sm font-medium text-slate-600 hover:text-emerald-600 px-3 py-2">Sign In</button>
+                  </SignInButton>
+                  <span className="text-slate-300">|</span>
+                  <SignUpButton mode="modal">
+                    <button className="text-sm font-medium bg-emerald-600 text-white px-4 py-2 rounded-full hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-200">
+                      Get Started
+                    </button>
+                  </SignUpButton>
                 </div>
                 {/* Simple Login Icon for Mobile */}
                 <div className="md:hidden">
-                    <SignInButton />
+                  <SignInButton />
                 </div>
               </SignedOut>
 
