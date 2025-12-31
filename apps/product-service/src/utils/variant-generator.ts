@@ -2,6 +2,7 @@ export interface CompactProductInput {
     name: string;
     slug?: string;
     baseSku?: string;
+    currency?: string; // New field
     basePrice: number | string;
     baseStock: number;
     options: { name: string; values: string[] }[];

@@ -8,6 +8,8 @@
   "scripts": {
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:seed": "tsx src/seed.ts",
     "studio": "drizzle-kit studio",
     "generate-products": "tsx scripts/generate-variants.ts"
   },

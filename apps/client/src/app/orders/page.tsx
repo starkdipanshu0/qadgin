@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { OrderType } from "@repo/types";
+import { formatPrice } from "@/lib/formatter";
 
 const fetchOrders = async () => {
   const { getToken } = await auth();
@@ -40,7 +41,7 @@ const OrdersPage = async () => {
             </div>
             <div className="w-1/12">
               <span className="font-medium text-sm text-gray-500">Total</span>
-              <p>₹{Number(order.total).toFixed(2)}</p>
+              <p>{formatPrice(order.total, order.currency)}</p>
             </div>
             <div className="w-1/12">
               <span className="font-medium text-sm text-gray-500">Status</span>

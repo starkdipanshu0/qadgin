@@ -19,6 +19,7 @@ export type ProductType = Omit<Product, "images" | "attributes" | "listingConfig
   isVirtual?: boolean;
   variantId?: number;
   slug?: string;
+  currency?: string;
 };
 
 export type ProductsType = ProductType[];
@@ -34,6 +35,8 @@ export const ProductFormSchema = z.object({
   name: z.string().min(1, { message: "Product name is required!" }),
   tagline: z.string().min(1, { message: "Tagline is required!" }),
   shortDescription: z.string().max(160, { message: "Short description is too long!" }).optional(),
+
+  currency: z.string().default("INR"),
 
   price: z.number().min(0, { message: "Price must be positive!" }),
   originalPrice: z.number().min(0).optional(),

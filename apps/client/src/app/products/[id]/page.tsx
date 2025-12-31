@@ -1,4 +1,5 @@
 import ProductInteraction from "@/components/ProductInteraction";
+import { formatPrice } from "@/lib/formatter";
 
 // Make sure your ProductType definition in @repo/types includes the new health fields (tagline, packSize, flavors, etc.)
 import { ProductType } from "@repo/types";
@@ -226,11 +227,11 @@ const ProductPage = async ({
               {/* Price Block */}
               <div className="flex items-end gap-3 mb-6">
                 <span className="text-3xl font-bold text-emerald-800">
-                  ₹{effectiveProduct.price.toFixed(2)}
+                  {formatPrice(effectiveProduct.price, effectiveProduct.currency)}
                 </span>
                 {hasDiscount && (
                   <span className="text-lg text-stone-400 line-through mb-1">
-                    ₹{effectiveProduct.originalPrice!.toFixed(2)}
+                    {formatPrice(effectiveProduct.originalPrice, effectiveProduct.currency)}
                   </span>
                 )}
               </div>
@@ -255,7 +256,7 @@ const ProductPage = async ({
             <div className="grid grid-cols-2 gap-4 py-4">
               <div className="flex items-center gap-3 text-stone-700 text-sm font-medium p-3 bg-stone-50 rounded-lg border border-stone-100">
                 <Truck className="w-5 h-5 text-emerald-600" />
-                <span>Free Shipping over ₹500</span>
+                <span>Free Shipping over {formatPrice(500, effectiveProduct.currency)}</span>
               </div>
               <div className="flex items-center gap-3 text-stone-700 text-sm font-medium p-3 bg-stone-50 rounded-lg border border-stone-100">
                 <ShieldCheck className="w-5 h-5 text-emerald-600" />

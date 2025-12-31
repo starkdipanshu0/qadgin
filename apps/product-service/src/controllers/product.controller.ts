@@ -629,6 +629,7 @@ export const createProductGenerative = async (c: Context) => {
       tagline: data.tagline,
       shortDescription: data.shortDescription,
       categoryId: data.categoryId,
+      currency: data.currency || "INR", // Use provided currency or default
       attributes: {
         // Store the top-level options as attributes on the parent
         ...data.options.reduce((acc: any, opt: any) => {

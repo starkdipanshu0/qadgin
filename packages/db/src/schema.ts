@@ -81,6 +81,8 @@ export const products = pgTable("products", {
     isBestSeller: boolean("is_best_seller").default(false),
     status: productStatusEnum("status").default("DRAFT"),
 
+    currency: text("currency").default("INR"), // Default to INR
+
     categoryId: integer("category_id").references(() => categories.id),
 
     createdAt: timestamp("created_at").defaultNow(),

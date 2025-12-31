@@ -35,11 +35,10 @@ const ProductInteraction = ({
     const params = new URLSearchParams(searchParams.toString());
     params.set(key, value);
 
-    // Also update generic "variant" param removal if we are switching attributes?
-    // If we select attributes manually, we might drift from the ?variant=ID logic
-    // But page.tsx handles that by resolving attributes -> variant ID. 
-    // We should probably keep 'variant' param or let page resolve new one.
-    // For purity: if we change an option, we are essentially requesting a new variant combination.
+    // If we select attributes manually, we must clear the specific 'variant' ID 
+    // to allow the server logic to resolve the new variant based on the attribute combination.
+    params.delete("variant");
+
     // We keep it simple: just update the attribute param. page.tsx re-resolves the variant ID.
 
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });

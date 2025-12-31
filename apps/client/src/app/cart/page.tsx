@@ -3,6 +3,7 @@
 import ShippingForm from "@/components/ShippingForm";
 import RazorpayPayment from "@/components/RazorpayPayment";
 import useCartStore from "@/stores/cartStore";
+import { formatPrice } from "@/lib/formatter";
 import { ShippingFormInputs } from "@repo/types";
 import {
     ArrowRight,
@@ -125,7 +126,7 @@ const CartPage = () => {
                                                         <span className="text-sm font-medium w-2 text-center">{item.quantity}</span>
                                                         <button onClick={() => updateQty(item, 1)} className="text-stone-400 hover:text-emerald-600"><Plus className="w-3 h-3" /></button>
                                                     </div>
-                                                    <span className="text-lg font-medium">₹{(item.price * item.quantity).toFixed(2)}</span>
+                                                    <span className="text-lg font-medium">{formatPrice(item.price * item.quantity, item.currency)}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -134,7 +135,7 @@ const CartPage = () => {
                                     {/* UPSELL SECTION (The "New" Touch) */}
                                     <div className="mt-12 pt-12 border-t border-dashed border-stone-200">
                                         <h4 className="text-sm font-bold uppercase tracking-wider text-stone-400 mb-6">Completing the Routine</h4>
-                                        <div className="fl      ex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                                        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                                             {upsellProducts.map(product => (
                                                 <div key={product.id} className="min-w-[200px] border border-stone-100 rounded-xl p-4 flex gap-3 items-center hover:border-emerald-200 transition-colors cursor-pointer bg-stone-50/50">
                                                     <div className="relative w-12 h-12 bg-white rounded-md overflow-hidden shrink-0">
@@ -143,7 +144,7 @@ const CartPage = () => {
                                                     </div>
                                                     <div>
                                                         <p className="text-xs font-bold text-stone-800">{product.name}</p>
-                                                        <p className="text-xs text-stone-500">₹{product.price}</p>
+                                                        <p className="text-xs text-stone-500">{formatPrice(product.price)}</p>
                                                         <button className="text-[10px] font-bold text-emerald-600 hover:underline mt-1">Add +</button>
                                                     </div>
                                                 </div>
@@ -182,7 +183,7 @@ const CartPage = () => {
                         <div className="mb-8">
                             <div className="flex items-center gap-2 text-sm text-stone-600 mb-2">
                                 <Gift className="w-4 h-4 text-emerald-500" />
-                                <span>Add <span className="font-bold text-stone-900">₹{(shippingThreshold - subtotal).toFixed(2)}</span> for free shipping</span>
+                                <span>Add <span className="font-bold text-stone-900">{formatPrice(shippingThreshold - subtotal, cart[0]?.currency)}</span> for free shipping</span>
                             </div>
                             <div className="h-1.5 w-full bg-stone-200 rounded-full overflow-hidden">
                                 <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${(subtotal / shippingThreshold) * 100}%` }}></div>
@@ -196,11 +197,11 @@ const CartPage = () => {
                     <div className="space-y-4 mb-8">
                         <div className="flex justify-between text-stone-600 text-sm">
                             <span>Subtotal</span>
-                            <span>₹{subtotal.toFixed(2)}</span>
+                            <span>{formatPrice(subtotal, cart[0]?.currency)}</span>
                         </div>
                         <div className="flex justify-between text-stone-600 text-sm">
                             <span>Shipping</span>
-                            <span>{isFreeShipping ? "Free" : `₹${shippingFee}`}</span>
+                            <span>{isFreeShipping ? "Free" : formatPrice(shippingFee, cart[0]?.currency)}</span>
                         </div>
                         <div className="flex justify-between text-stone-600 text-sm">
                             <span>Tax Estimate</span>
@@ -210,7 +211,7 @@ const CartPage = () => {
 
                     <div className="border-t border-stone-200 pt-6 mb-8 flex justify-between items-baseline">
                         <span className="text-lg font-medium text-stone-900">Total</span>
-                        <span className="text-3xl font-light text-emerald-900">₹{total.toFixed(2)}</span>
+                        <span className="text-3xl font-light text-emerald-900">{formatPrice(total, cart[0]?.currency)}</span>
                     </div>
 
                     {/* Main Action Button */}

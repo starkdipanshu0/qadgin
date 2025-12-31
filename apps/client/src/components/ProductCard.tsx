@@ -1,5 +1,7 @@
 "use client";
 
+import { formatPrice } from "@/lib/formatter";
+
 import useCartStore from "@/stores/cartStore";
 import { ProductType } from "@repo/types";
 import { ShoppingBag, Zap } from "lucide-react";
@@ -187,11 +189,11 @@ const ProductCard = ({ product }: { product: ProductType }) => {
             </span>
             <div className="flex items-center gap-1.5">
               <span className="text-lg font-bold text-stone-900">
-                ₹{product.price}
+                {formatPrice(product.price, product.currency)}
               </span>
               {product.originalPrice && (
                 <span className="text-[10px] text-stone-400 line-through">
-                  ₹{product.originalPrice}
+                  {formatPrice(product.originalPrice, product.currency)}
                 </span>
               )}
             </div>
